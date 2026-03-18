@@ -12,16 +12,13 @@ WORKDIR /src
 
 RUN apk add --no-cache ca-certificates tzdata git
 
-COPY go.mod go.sum ./
-RUN go mod download
-
 COPY . .
 
 ARG PROJECT_NAME
 ARG TARGETOS
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -trimpath -ldflags="-s -w" -o /out/${PROJECT_NAME} ./cmd/server
+    go build -mod=vendor -trimpath -ldflags="-s -w" -o /out/${PROJECT_NAME} ./template_server/cmd/server
 
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_REGISTRY}/${RUNTIME_BASE_IMAGE}
 
@@ -35,7 +32,7 @@ ARG REMOTE_CONTAINER_PORT
 ENV PROJECT_NAME=${PROJECT_NAME}
 
 COPY --from=builder /out/ /out/
-COPY --from=builder /src/config ./config
+COPY --from=builder /src/template_server/config ./config
 RUN case "$BUILD_ENV" in \
       prod) cp ./config/config.prod.yaml ./config/config.yaml ;; \
       test) cp ./config/config.dev.yaml ./config/config.yaml ;; \
