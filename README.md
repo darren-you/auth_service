@@ -1,23 +1,45 @@
-# authbox
+# auth_service
 
-`authbox` 是统一认证域的基础能力仓库，面向多个 App / Web / macOS 项目复用。
+`auth_service` 是统一认证域仓库，同时提供共享认证内核和独立部署的认证服务。
 
-当前提供的共享模块：
+## 共享认证内核
 
-- `session`：统一 access token / refresh token 生成与解析
-- `provider/wechat`：微信 OAuth 基础客户端，支持 App 授权码换 token 与 Web 扫码登录地址生成
-- `provider/apple`：Apple Sign In 授权码校验与唯一标识提取
-- `phone`：短信验证码发送/校验基础服务
-- `guest`：游客虚拟设备 ID 签发与校验
+- `session`：统一 access token / refresh token 生成、解析和 Bearer token 提取
+- `provider/wechat`：微信 OAuth 客户端，支持 Web 扫码登录地址生成、换码、刷新和用户信息获取
+- `provider/apple`：Apple Sign In 授权码校验和唯一标识提取
+- `phone`：短信验证码发送与校验基础服务
+- `guest`：游客设备 ID 生成与校验
 
-设计原则：
+## 独立认证服务
 
-- 只沉淀跨项目可复用的认证基础设施
-- 不直接绑定某个业务项目的用户表、错误码和响应 DTO
-- 允许各项目保留自己的用户升级、注册、资料落库逻辑
+`template_server` 是 `AuthServer.md` 对应的 `auth_service` 实现，按统一认证域分成：
 
-推荐接入方式：
+- `auth kernel`
+- `provider adapters`
+- `tenant/project config`
+- `identity/session store`
+- `business bridge`
 
-1. 项目服务端依赖 `authbox` 的 provider / session 模块。
-2. 项目本地实现自己的用户仓储与业务绑定。
-3. 项目对外 API 可以保留稳定协议，也可以逐步演进到统一认证域协议。
+核心数据表：
+
+- `auth_tenants`
+- `auth_provider_configs`
+- `auth_users`
+- `auth_identities`
+- `auth_sessions`
+
+核心接口：
+
+- `GET /api/v1/auth/providers/:provider/login-url`
+- `POST /api/v1/auth/providers/:provider/callback`
+- `POST /api/v1/auth/providers/phone/send-captcha`
+- `POST /api/v1/auth/providers/guest/device-id`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+
+## 接入原则
+
+1. 新项目优先直接对接 `auth_service` 服务协议。
+2. 老项目如果暂时不切远程协议，仍可以继续复用根仓库共享认证内核。
+3. 新租户只补 YAML 配置，不再重复开发微信、Apple、验证码和游客登录底层逻辑。

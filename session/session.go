@@ -50,7 +50,7 @@ func (c Config) normalizedIssuer() string {
 	if strings.TrimSpace(c.Issuer) != "" {
 		return strings.TrimSpace(c.Issuer)
 	}
-	return "authbox"
+	return "auth_service"
 }
 
 func (c Config) normalizedAccessTokenType() string {
