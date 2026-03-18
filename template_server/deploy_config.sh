@@ -21,6 +21,7 @@ apply_deploy_profile_defaults "$DEPLOY_SERVER_PROFILE" "server"
 REMOTE_CONTAINER_PORT="8080"
 DOCKERFILE_PATH="$PROJECT_ROOT/Dockerfile"
 DOCKER_BUILD_CONTEXT="$PROJECT_ROOT/.."
+BASE_IMAGE_REGISTRY_CANDIDATES="docker.m.daocloud.io,docker.io"
 
 # 生产环境
 PROD_HOST_PORT="8095"

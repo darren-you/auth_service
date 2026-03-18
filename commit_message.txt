@@ -1,3 +1,3 @@
-同步 deploy_shell 子模块以启用 auth_service Jenkins 任务
+修复 auth_service Jenkins 构建镜像源依赖
 
-将 auth_service/deploy_shell 子模块更新到包含 auth_service_server Jenkins Job 配置的最新提交，保证仓库内部署链路与 Jenkins 配置保持一致。
+移除 Dockerfile 对 docker/dockerfile:1.7 的远程 frontend 依赖，并为 deploy_config 增加 docker.m.daocloud.io 基础镜像候选源，解决 Jenkins 构建机拉取 Docker Hub EOF 失败。

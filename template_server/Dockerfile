@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 # check=skip=InvalidDefaultArgInFrom
 ARG BASE_IMAGE_REGISTRY
 ARG BUILDER_BASE_IMAGE
