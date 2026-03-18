@@ -65,10 +65,12 @@ type AuthConfig struct {
 }
 
 type TenantConfig struct {
-	Key       string           `json:"key" yaml:"key"`
-	Name      string           `json:"name" yaml:"name"`
-	Enabled   bool             `json:"enabled" yaml:"enabled"`
-	Providers []ProviderConfig `json:"providers" yaml:"providers"`
+	Key           string           `json:"key" yaml:"key"`
+	Name          string           `json:"name" yaml:"name"`
+	Enabled       bool             `json:"enabled" yaml:"enabled"`
+	BridgeBaseURL string           `json:"bridge_base_url" yaml:"bridge_base_url"`
+	BridgeAuthKey string           `json:"bridge_auth_key" yaml:"bridge_auth_key"`
+	Providers     []ProviderConfig `json:"providers" yaml:"providers"`
 }
 
 type ProviderConfig struct {
@@ -235,6 +237,8 @@ func normalizeConfig(cfg *Config) {
 		tenant := &cfg.Auth.Tenants[tenantIndex]
 		tenant.Key = normalizeKey(tenant.Key)
 		tenant.Name = strings.TrimSpace(tenant.Name)
+		tenant.BridgeBaseURL = strings.TrimSpace(tenant.BridgeBaseURL)
+		tenant.BridgeAuthKey = strings.TrimSpace(tenant.BridgeAuthKey)
 		for providerIndex := range tenant.Providers {
 			provider := &tenant.Providers[providerIndex]
 			provider.Provider = normalizeKey(provider.Provider)

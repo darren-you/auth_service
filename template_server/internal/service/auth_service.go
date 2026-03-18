@@ -1,11 +1,14 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +33,7 @@ type AuthService interface {
 	SyncCatalog(ctx context.Context) error
 	SessionConfig() session.Config
 	GetLoginURL(ctx context.Context, tenantKey string, provider string, clientType string) (*dto.LoginURLResponse, error)
+	RegisterPassword(ctx context.Context, req dto.PasswordRegisterRequest) (*dto.SessionResponse, error)
 	ProviderCallback(ctx context.Context, provider string, req dto.ProviderCallbackRequest) (*dto.SessionResponse, error)
 	SendPhoneCaptcha(ctx context.Context, req dto.PhoneCaptchaSendRequest) (*dto.PhoneCaptchaSendResponse, error)
 	IssueGuestDeviceID(ctx context.Context, req dto.GuestDeviceIDRequest) (*dto.GuestDeviceIDResponse, error)
@@ -43,6 +47,55 @@ type authService struct {
 	redisRepo     redisRepo.KVRepository
 	authConfig    config.AuthConfig
 	sessionConfig session.Config
+}
+
+type tenantRuntimeConfig struct {
+	BridgeBaseURL string
+	BridgeAuthKey string
+}
+
+type businessUserProfile struct {
+	UserID      uint   `json:"user_id"`
+	DisplayName string `json:"display_name"`
+	AvatarURL   string `json:"avatar_url"`
+	Role        string `json:"role"`
+	Status      string `json:"status"`
+}
+
+type businessBridgeRequest struct {
+	TenantKey       string `json:"tenant_key"`
+	Provider        string `json:"provider"`
+	Action          string `json:"action,omitempty"`
+	ClientType      string `json:"client_type"`
+	Username        string `json:"username,omitempty"`
+	Email           string `json:"email,omitempty"`
+	Password        string `json:"password,omitempty"`
+	OpenID          string `json:"open_id,omitempty"`
+	UnionID         string `json:"union_id,omitempty"`
+	AppleUserID     string `json:"apple_user_id,omitempty"`
+	Phone           string `json:"phone,omitempty"`
+	DeviceID        string `json:"device_id,omitempty"`
+	DisplayName     string `json:"display_name,omitempty"`
+	AvatarURL       string `json:"avatar_url,omitempty"`
+	CurrentUserID   uint   `json:"current_user_id,omitempty"`
+	CurrentUserRole string `json:"current_user_role,omitempty"`
+}
+
+type bridgeEnvelope struct {
+	Code int                 `json:"code"`
+	Msg  string              `json:"msg"`
+	Data businessUserProfile `json:"data"`
+}
+
+type sessionMetadata struct {
+	TenantKey   string `json:"tenant_key"`
+	Provider    string `json:"provider"`
+	ClientType  string `json:"client_type"`
+	TokenUserID uint   `json:"token_user_id"`
+	DisplayName string `json:"display_name"`
+	AvatarURL   string `json:"avatar_url"`
+	Role        string `json:"role"`
+	Status      string `json:"status"`
 }
 
 func NewAuthService(mysqlRepo mysqlRepo.AuthRepository, redisRepo redisRepo.KVRepository, authConfig config.AuthConfig, sessionConfig session.Config) AuthService {
@@ -103,6 +156,8 @@ func (s *authService) ProviderCallback(ctx context.Context, provider string, req
 		return s.loginWithWeChat(ctx, req)
 	case "apple":
 		return s.loginWithApple(ctx, req)
+	case "password":
+		return s.loginWithPassword(ctx, req)
 	case "phone":
 		return s.loginWithPhone(ctx, req)
 	case "guest":
@@ -110,6 +165,34 @@ func (s *authService) ProviderCallback(ctx context.Context, provider string, req
 	default:
 		return nil, appErrors.ErrUnsupportedProvider
 	}
+}
+
+func (s *authService) RegisterPassword(ctx context.Context, req dto.PasswordRegisterRequest) (*dto.SessionResponse, error) {
+	tenant, providerConfig, err := s.resolveTenantAndProvider(ctx, req.TenantKey, "password", req.ClientType)
+	if err != nil {
+		return nil, err
+	}
+
+	username := strings.TrimSpace(req.Username)
+	email := strings.TrimSpace(req.Email)
+	password := strings.TrimSpace(req.Password)
+	if username == "" || email == "" || password == "" {
+		return nil, appErrors.ErrBadRequest
+	}
+
+	businessUser, err := s.syncBusinessUser(ctx, tenant.TenantKey, "password", providerConfig.ClientType, businessBridgeRequest{
+		Action:      "register",
+		Username:    username,
+		Email:       email,
+		Password:    password,
+		DisplayName: firstNonEmpty(req.DisplayName, username),
+		AvatarURL:   req.AvatarURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.issuePasswordSession(ctx, tenant, providerConfig, businessUser, username, req.AvatarURL)
 }
 
 func (s *authService) SendPhoneCaptcha(ctx context.Context, req dto.PhoneCaptchaSendRequest) (*dto.PhoneCaptchaSendResponse, error) {
@@ -200,7 +283,7 @@ func (s *authService) Refresh(ctx context.Context, req dto.RefreshTokenRequest) 
 	if err != nil {
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
-	if sessionRecord == nil || sessionRecord.AuthUserID != claims.UserID {
+	if sessionRecord == nil {
 		return nil, appErrors.ErrSessionRevoked
 	}
 	if sessionRecord.RevokedAt != nil {
@@ -210,12 +293,12 @@ func (s *authService) Refresh(ctx context.Context, req dto.RefreshTokenRequest) 
 		return nil, appErrors.ErrTokenExpired
 	}
 
-	user, err := s.mysqlRepo.FindUserByID(ctx, claims.UserID)
+	metadata, err := parseSessionMetadata(sessionRecord.MetadataJSON)
 	if err != nil {
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
-	if user == nil {
-		return nil, appErrors.ErrUnauthorized
+	if metadata.TokenUserID == 0 || metadata.TokenUserID != claims.UserID {
+		return nil, appErrors.ErrSessionRevoked
 	}
 
 	tenant, err := s.mysqlRepo.FindTenantByID(ctx, sessionRecord.TenantID)
@@ -230,7 +313,13 @@ func (s *authService) Refresh(ctx context.Context, req dto.RefreshTokenRequest) 
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
 
-	return s.issueSession(ctx, tenant, user, sessionRecord.Provider, sessionRecord.ClientType)
+	return s.issueSession(ctx, tenant, sessionRecord.AuthUserID, sessionRecord.Provider, sessionRecord.ClientType, &businessUserProfile{
+		UserID:      metadata.TokenUserID,
+		DisplayName: metadata.DisplayName,
+		AvatarURL:   metadata.AvatarURL,
+		Role:        metadata.Role,
+		Status:      metadata.Status,
+	})
 }
 
 func (s *authService) Logout(ctx context.Context, req dto.LogoutRequest) error {
@@ -325,7 +414,18 @@ func (s *authService) loginWithWeChat(ctx context.Context, req dto.ProviderCallb
 	if err != nil {
 		return nil, err
 	}
-	return s.issueSession(ctx, tenant, user, "wechat", providerConfig.ClientType)
+	businessUser, err := s.syncBusinessUser(ctx, tenant.TenantKey, "wechat", providerConfig.ClientType, businessBridgeRequest{
+		OpenID:          oauthToken.OpenID,
+		UnionID:         oauthToken.UnionID,
+		DisplayName:     displayName,
+		AvatarURL:       avatarURL,
+		CurrentUserID:   req.CurrentUserID,
+		CurrentUserRole: req.CurrentUserRole,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.issueSession(ctx, tenant, user.ID, "wechat", providerConfig.ClientType, businessUser)
 }
 
 func (s *authService) loginWithApple(ctx context.Context, req dto.ProviderCallbackRequest) (*dto.SessionResponse, error) {
@@ -360,7 +460,43 @@ func (s *authService) loginWithApple(ctx context.Context, req dto.ProviderCallba
 	if err != nil {
 		return nil, err
 	}
-	return s.issueSession(ctx, tenant, user, "apple", providerConfig.ClientType)
+	businessUser, err := s.syncBusinessUser(ctx, tenant.TenantKey, "apple", providerConfig.ClientType, businessBridgeRequest{
+		AppleUserID:     uniqueID,
+		DisplayName:     displayName,
+		AvatarURL:       req.AvatarURL,
+		CurrentUserID:   req.CurrentUserID,
+		CurrentUserRole: req.CurrentUserRole,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.issueSession(ctx, tenant, user.ID, "apple", providerConfig.ClientType, businessUser)
+}
+
+func (s *authService) loginWithPassword(ctx context.Context, req dto.ProviderCallbackRequest) (*dto.SessionResponse, error) {
+	tenant, providerConfig, err := s.resolveTenantAndProvider(ctx, req.TenantKey, "password", req.ClientType)
+	if err != nil {
+		return nil, err
+	}
+
+	username := strings.TrimSpace(req.Username)
+	password := strings.TrimSpace(req.Password)
+	if username == "" || password == "" {
+		return nil, appErrors.ErrBadRequest
+	}
+
+	businessUser, err := s.syncBusinessUser(ctx, tenant.TenantKey, "password", providerConfig.ClientType, businessBridgeRequest{
+		Action:      "login",
+		Username:    username,
+		Password:    password,
+		DisplayName: firstNonEmpty(req.DisplayName, username),
+		AvatarURL:   req.AvatarURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.issuePasswordSession(ctx, tenant, providerConfig, businessUser, username, req.AvatarURL)
 }
 
 func (s *authService) loginWithPhone(ctx context.Context, req dto.ProviderCallbackRequest) (*dto.SessionResponse, error) {
@@ -401,7 +537,15 @@ func (s *authService) loginWithPhone(ctx context.Context, req dto.ProviderCallba
 	if err != nil {
 		return nil, err
 	}
-	return s.issueSession(ctx, tenant, user, "phone", providerConfig.ClientType)
+	businessUser, err := s.syncBusinessUser(ctx, tenant.TenantKey, "phone", providerConfig.ClientType, businessBridgeRequest{
+		Phone:       phone,
+		DisplayName: displayName,
+		AvatarURL:   req.AvatarURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.issueSession(ctx, tenant, user.ID, "phone", providerConfig.ClientType, businessUser)
 }
 
 func (s *authService) loginWithGuest(ctx context.Context, req dto.ProviderCallbackRequest) (*dto.SessionResponse, error) {
@@ -435,7 +579,55 @@ func (s *authService) loginWithGuest(ctx context.Context, req dto.ProviderCallba
 	if err != nil {
 		return nil, err
 	}
-	return s.issueSession(ctx, tenant, user, "guest", providerConfig.ClientType)
+	businessUser, err := s.syncBusinessUser(ctx, tenant.TenantKey, "guest", providerConfig.ClientType, businessBridgeRequest{
+		DeviceID:    deviceID,
+		DisplayName: displayName,
+		AvatarURL:   req.AvatarURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.issueSession(ctx, tenant, user.ID, "guest", providerConfig.ClientType, businessUser)
+}
+
+func (s *authService) issuePasswordSession(
+	ctx context.Context,
+	tenant *model.AuthTenant,
+	providerConfig *model.AuthProviderConfig,
+	businessUser *businessUserProfile,
+	username string,
+	avatarURL string,
+) (*dto.SessionResponse, error) {
+	if businessUser == nil || businessUser.UserID == 0 {
+		return nil, appErrors.ErrAuthFailed
+	}
+
+	subject := strconv.FormatUint(uint64(businessUser.UserID), 10)
+	displayName := firstNonEmpty(businessUser.DisplayName, username)
+	normalizedAvatarURL := firstNonEmpty(businessUser.AvatarURL, avatarURL)
+	user, err := s.upsertIdentityUser(
+		ctx,
+		tenant,
+		providerConfig,
+		"password",
+		subject,
+		"",
+		displayName,
+		normalizedAvatarURL,
+		firstNonEmpty(businessUser.Role, "user"),
+		marshalJSON(map[string]string{"username": username}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if businessUser.DisplayName == "" {
+		businessUser.DisplayName = displayName
+	}
+	if businessUser.AvatarURL == "" {
+		businessUser.AvatarURL = normalizedAvatarURL
+	}
+	return s.issueSession(ctx, tenant, user.ID, "password", providerConfig.ClientType, businessUser)
 }
 
 func (s *authService) resolveTenantAndProvider(ctx context.Context, tenantKey string, provider string, clientType string) (*model.AuthTenant, *model.AuthProviderConfig, error) {
@@ -521,8 +713,22 @@ func (s *authService) upsertIdentityUser(
 	return user, nil
 }
 
-func (s *authService) issueSession(ctx context.Context, tenant *model.AuthTenant, user *model.AuthUser, provider string, clientType string) (*dto.SessionResponse, error) {
-	tokenPair, err := session.GenerateTokenPair(user.ID, user.DisplayName, "", user.Role, s.sessionConfig)
+func (s *authService) issueSession(ctx context.Context, tenant *model.AuthTenant, authUserID uint, provider string, clientType string, businessUser *businessUserProfile) (*dto.SessionResponse, error) {
+	if businessUser == nil || businessUser.UserID == 0 {
+		return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "business bridge user is empty", nil)
+	}
+
+	normalizedProfile := normalizeBusinessProfile(businessUser)
+	tokenPair, err := session.GenerateTokenPairWithProfile(
+		normalizedProfile.UserID,
+		normalizedProfile.DisplayName,
+		"",
+		normalizedProfile.Role,
+		tenant.TenantKey,
+		normalizedProfile.AvatarURL,
+		normalizedProfile.Status,
+		s.sessionConfig,
+	)
 	if err != nil {
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
@@ -530,23 +736,27 @@ func (s *authService) issueSession(ctx context.Context, tenant *model.AuthTenant
 	now := time.Now()
 	authSession := &model.AuthSession{
 		TenantID:         tenant.ID,
-		AuthUserID:       user.ID,
+		AuthUserID:       authUserID,
 		Provider:         provider,
 		ClientType:       clientType,
 		RefreshTokenHash: hashToken(tokenPair.RefreshToken),
 		ExpiresAt:        now.Add(s.sessionConfig.RefreshExpiry),
 		LastSeenAt:       &now,
-		MetadataJSON: marshalJSON(map[string]string{
-			"tenant_key":  tenant.TenantKey,
-			"provider":    provider,
-			"client_type": clientType,
+		MetadataJSON: marshalJSON(sessionMetadata{
+			TenantKey:   tenant.TenantKey,
+			Provider:    provider,
+			ClientType:  clientType,
+			TokenUserID: normalizedProfile.UserID,
+			DisplayName: normalizedProfile.DisplayName,
+			AvatarURL:   normalizedProfile.AvatarURL,
+			Role:        normalizedProfile.Role,
+			Status:      normalizedProfile.Status,
 		}),
 	}
 	if err := s.mysqlRepo.CreateSession(ctx, authSession); err != nil {
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
 
-	userProfile := buildUserResponse(user, tenant)
 	return &dto.SessionResponse{
 		TenantKey:    tenant.TenantKey,
 		Provider:     provider,
@@ -554,8 +764,78 @@ func (s *authService) issueSession(ctx context.Context, tenant *model.AuthTenant
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    tokenPair.ExpiresIn,
-		User:         userProfile,
+		User: dto.AuthUserResponse{
+			ID:          normalizedProfile.UserID,
+			TenantKey:   tenant.TenantKey,
+			DisplayName: normalizedProfile.DisplayName,
+			AvatarURL:   normalizedProfile.AvatarURL,
+			Role:        normalizedProfile.Role,
+			Status:      normalizedProfile.Status,
+		},
 	}, nil
+}
+
+func (s *authService) resolveTenantRuntimeConfig(tenantKey string) (*tenantRuntimeConfig, error) {
+	normalizedTenantKey := normalize(tenantKey)
+	for _, tenant := range s.authConfig.Tenants {
+		if normalize(tenant.Key) != normalizedTenantKey {
+			continue
+		}
+		return &tenantRuntimeConfig{
+			BridgeBaseURL: strings.TrimRight(strings.TrimSpace(tenant.BridgeBaseURL), "/"),
+			BridgeAuthKey: strings.TrimSpace(tenant.BridgeAuthKey),
+		}, nil
+	}
+	return nil, appErrors.ErrTenantNotFound
+}
+
+func (s *authService) syncBusinessUser(ctx context.Context, tenantKey string, provider string, clientType string, req businessBridgeRequest) (*businessUserProfile, error) {
+	runtimeCfg, err := s.resolveTenantRuntimeConfig(tenantKey)
+	if err != nil {
+		return nil, err
+	}
+	if runtimeCfg.BridgeBaseURL == "" || runtimeCfg.BridgeAuthKey == "" {
+		return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "business bridge is not configured", nil)
+	}
+
+	req.TenantKey = normalize(tenantKey)
+	req.Provider = normalize(provider)
+	req.ClientType = normalize(clientType)
+	payload, err := json.Marshal(req)
+	if err != nil {
+		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, runtimeCfg.BridgeBaseURL+"/api/v1/internal/auth/sync", bytes.NewReader(payload))
+	if err != nil {
+		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-Auth-Service-Key", runtimeCfg.BridgeAuthKey)
+
+	httpResp, err := (&http.Client{Timeout: 8 * time.Second}).Do(httpReq)
+	if err != nil {
+		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+	}
+	defer httpResp.Body.Close()
+
+	var envelope bridgeEnvelope
+	if err := json.NewDecoder(httpResp.Body).Decode(&envelope); err != nil {
+		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+	}
+	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusMultipleChoices || envelope.Code != 200 {
+		msg := strings.TrimSpace(envelope.Msg)
+		if msg == "" {
+			msg = "business bridge rejected auth sync"
+		}
+		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, msg, nil)
+	}
+
+	profile := normalizeBusinessProfile(&envelope.Data)
+	if profile.UserID == 0 {
+		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "business bridge returned empty user_id", nil)
+	}
+	return profile, nil
 }
 
 func (s *authService) allocateState(ctx context.Context, tenantKey string, provider string, clientType string) (string, error) {
@@ -638,6 +918,29 @@ func marshalJSON(value interface{}) string {
 		return ""
 	}
 	return string(payload)
+}
+
+func parseSessionMetadata(raw string) (*sessionMetadata, error) {
+	metadata := &sessionMetadata{}
+	if strings.TrimSpace(raw) == "" {
+		return metadata, nil
+	}
+	if err := json.Unmarshal([]byte(raw), metadata); err != nil {
+		return nil, err
+	}
+	return metadata, nil
+}
+
+func normalizeBusinessProfile(profile *businessUserProfile) *businessUserProfile {
+	if profile == nil {
+		return &businessUserProfile{}
+	}
+	normalized := *profile
+	normalized.DisplayName = firstNonEmpty(profile.DisplayName, fmt.Sprintf("用户_%d", profile.UserID))
+	normalized.AvatarURL = strings.TrimSpace(profile.AvatarURL)
+	normalized.Role = firstNonEmpty(profile.Role, "user")
+	normalized.Status = firstNonEmpty(profile.Status, "active")
+	return &normalized
 }
 
 func firstNonEmpty(values ...string) string {

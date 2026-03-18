@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"github.com/darren-you/auth_service/session"
+	"github.com/darren-you/auth_service/template_server/internal/dto"
 	appErrors "github.com/darren-you/auth_service/template_server/internal/errors"
 	"github.com/darren-you/auth_service/template_server/internal/service"
 	"github.com/gofiber/fiber/v2"
@@ -35,11 +36,20 @@ func (m *AuthMiddleware) RequireAuth(c *fiber.Ctx) error {
 		}
 	}
 
-	profile, err := m.authService.GetUserProfileByID(c.UserContext(), claims.UserID)
-	if err != nil {
-		return err
-	}
-
-	c.Locals("current_user", profile)
+	c.Locals("current_user", &dto.AuthUserResponse{
+		ID:          claims.UserID,
+		TenantKey:   claims.TenantKey,
+		DisplayName: claims.Username,
+		AvatarURL:   claims.AvatarURL,
+		Role:        claims.Role,
+		Status:      profileStatus(claims.Status),
+	})
 	return c.Next()
+}
+
+func profileStatus(status string) string {
+	if status == "" {
+		return "active"
+	}
+	return status
 }

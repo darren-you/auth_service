@@ -1,18 +1,10 @@
 # auth_service
 
-`auth_service` 是统一认证域仓库，同时提供共享认证内核和独立部署的认证服务。
-
-## 共享认证内核
-
-- `session`：统一 access token / refresh token 生成、解析和 Bearer token 提取
-- `provider/wechat`：微信 OAuth 客户端，支持 Web 扫码登录地址生成、换码、刷新和用户信息获取
-- `provider/apple`：Apple Sign In 授权码校验和唯一标识提取
-- `phone`：短信验证码发送与校验基础服务
-- `guest`：游客设备 ID 生成与校验
+`auth_service` 是统一认证域仓库，面向业务工程提供独立部署的认证服务，并沉淀其内部使用的会话、Provider 与客户端 SDK。
 
 ## 独立认证服务
 
-`template_server` 是 `AuthServer.md` 对应的 `auth_service` 实现，按统一认证域分成：
+`template_server` 是当前统一认证域实现，按以下层次拆分：
 
 - `auth kernel`
 - `provider adapters`
@@ -40,6 +32,6 @@
 
 ## 接入原则
 
-1. 新项目优先直接对接 `auth_service` 服务协议。
-2. 老项目如果暂时不切远程协议，仍可以继续复用根仓库共享认证内核。
-3. 新租户只补 YAML 配置，不再重复开发微信、Apple、验证码和游客登录底层逻辑。
+1. 业务工程统一接入远程 `auth_service` 协议，不再各自维护本地登录内核。
+2. 新租户通过 YAML 配置和业务 bridge 接口接入，不重复开发微信、Apple、账号密码、验证码和游客登录流程。
+3. `session`、`provider/*`、`client` 这些包服务于 `auth_service` 自身和接入 SDK，不作为业务工程继续保留本地认证实现的理由。

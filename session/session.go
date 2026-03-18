@@ -36,6 +36,9 @@ type Claims struct {
 	Username  string `json:"username,omitempty"`
 	Email     string `json:"email,omitempty"`
 	Role      string `json:"role,omitempty"`
+	TenantKey string `json:"tenant_key,omitempty"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+	Status    string `json:"status,omitempty"`
 	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
@@ -88,6 +91,14 @@ func (c Config) validate() error {
 }
 
 func GenerateAccessToken(userID uint, username, email, role string, cfg Config) (string, error) {
+	return generateAccessTokenWithProfile(userID, username, email, role, "", "", "", cfg)
+}
+
+func GenerateAccessTokenWithProfile(userID uint, username, email, role, tenantKey, avatarURL, status string, cfg Config) (string, error) {
+	return generateAccessTokenWithProfile(userID, username, email, role, tenantKey, avatarURL, status, cfg)
+}
+
+func generateAccessTokenWithProfile(userID uint, username, email, role, tenantKey, avatarURL, status string, cfg Config) (string, error) {
 	if err := cfg.validate(); err != nil {
 		return "", err
 	}
@@ -98,6 +109,9 @@ func GenerateAccessToken(userID uint, username, email, role string, cfg Config) 
 		Username:  strings.TrimSpace(username),
 		Email:     strings.TrimSpace(email),
 		Role:      strings.TrimSpace(role),
+		TenantKey: strings.TrimSpace(tenantKey),
+		AvatarURL: strings.TrimSpace(avatarURL),
+		Status:    strings.TrimSpace(status),
 		TokenType: cfg.normalizedAccessTokenType(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(cfg.AccessExpiry)),
@@ -135,7 +149,11 @@ func GenerateRefreshToken(userID uint, cfg Config) (string, error) {
 }
 
 func GenerateTokenPair(userID uint, username, email, role string, cfg Config) (*TokenPair, error) {
-	accessToken, err := GenerateAccessToken(userID, username, email, role, cfg)
+	return GenerateTokenPairWithProfile(userID, username, email, role, "", "", "", cfg)
+}
+
+func GenerateTokenPairWithProfile(userID uint, username, email, role, tenantKey, avatarURL, status string, cfg Config) (*TokenPair, error) {
+	accessToken, err := GenerateAccessTokenWithProfile(userID, username, email, role, tenantKey, avatarURL, status, cfg)
 	if err != nil {
 		return nil, err
 	}

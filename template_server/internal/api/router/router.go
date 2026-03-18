@@ -27,6 +27,7 @@ func SetupRoutes(app *fiber.App, authService service.AuthService) {
 
 	auth := api.Group("/auth")
 	auth.Get("/providers/:provider/login-url", authHandler.GetLoginURL)
+	auth.Post("/providers/password/register", authHandler.RegisterPassword)
 	auth.Post("/providers/:provider/callback", authHandler.ProviderCallback)
 	auth.Post("/providers/phone/send-captcha", authHandler.SendPhoneCaptcha)
 	auth.Post("/providers/guest/device-id", authHandler.IssueGuestDeviceID)

@@ -1,3 +1,3 @@
-auth_service 服务切换为 vendor 构建
+统一认证域补齐密码 Provider 与多租户桥接
 
-为避免 Docker 构建阶段访问外部 Go 代理失败，改为携带 vendor 目录并使用 -mod=vendor 编译
+新增 password Provider 与注册接口，扩展 business bridge 到账号密码场景，并补齐 stellar、tinytext、template_project、imagen、notification 的租户配置。

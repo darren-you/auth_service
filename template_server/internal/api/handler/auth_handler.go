@@ -42,6 +42,18 @@ func (h *AuthHandler) ProviderCallback(c *fiber.Ctx) error {
 	return writeSuccess(c, resp)
 }
 
+func (h *AuthHandler) RegisterPassword(c *fiber.Ctx) error {
+	var req dto.PasswordRegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return appErrors.ErrBadRequest
+	}
+	resp, err := h.authService.RegisterPassword(c.UserContext(), req)
+	if err != nil {
+		return err
+	}
+	return writeSuccess(c, resp)
+}
+
 func (h *AuthHandler) SendPhoneCaptcha(c *fiber.Ctx) error {
 	var req dto.PhoneCaptchaSendRequest
 	if err := c.BodyParser(&req); err != nil {

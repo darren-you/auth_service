@@ -48,6 +48,8 @@ auth:
     - key: stellar
       name: Stellar
       enabled: true
+      bridge_base_url: https://stellar.xdarren.com
+      bridge_auth_key: stellar-auth-bridge-20260318
       providers:
         - provider: wechat
           client_type: app
@@ -67,6 +69,9 @@ auth:
             e2R6TQJnpeFcaiVx26o0z/NZBZjFI7dIqvsZ15HQ7meCcjw/JOx5FjfATm2UHNCz
             Edeyk1CH
             -----END PRIVATE KEY-----
+        - provider: password
+          client_type: app
+          enabled: true
         - provider: phone
           client_type: app
           enabled: true
@@ -79,6 +84,8 @@ auth:
     - key: tinytext
       name: TinyText
       enabled: true
+      bridge_base_url: https://tinytext.xdarren.com
+      bridge_auth_key: tinytext-auth-bridge-20260318
       providers:
         - provider: wechat
           client_type: web
@@ -87,3 +94,30 @@ auth:
           app_secret: cc1cdc4343d24d46bfdb7dc2cf15cb06
           redirect_uri: https://tinytext.xdarren.com/wechat/callback
           scope: snsapi_login
+    - key: template_project
+      name: Template Project
+      enabled: true
+      bridge_base_url: http://124.221.158.155:8094
+      bridge_auth_key: template-project-auth-bridge-20260318
+      providers:
+        - provider: password
+          client_type: default
+          enabled: true
+    - key: imagen
+      name: Imagen
+      enabled: true
+      bridge_base_url: http://124.221.158.155:8092
+      bridge_auth_key: imagen-auth-bridge-20260318
+      providers:
+        - provider: password
+          client_type: default
+          enabled: true
+    - key: notification
+      name: Notification
+      enabled: true
+      bridge_base_url: http://124.221.158.155:8093
+      bridge_auth_key: notification-auth-bridge-20260318
+      providers:
+        - provider: password
+          client_type: default
+          enabled: true

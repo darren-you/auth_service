@@ -8,12 +8,17 @@ type ProviderCallbackRequest struct {
 	Code              string `json:"code"`
 	State             string `json:"state"`
 	AuthorizationCode string `json:"authorization_code"`
+	Username          string `json:"username"`
+	Email             string `json:"email"`
+	Password          string `json:"password"`
 	Phone             string `json:"phone"`
 	Captcha           string `json:"captcha"`
 	CaptchaKey        string `json:"captcha_key"`
 	DeviceID          string `json:"device_id"`
 	DisplayName       string `json:"display_name"`
 	AvatarURL         string `json:"avatar_url"`
+	CurrentUserID     uint   `json:"current_user_id"`
+	CurrentUserRole   string `json:"current_user_role"`
 }
 
 type PhoneCaptchaSendRequest struct {
@@ -25,6 +30,16 @@ type PhoneCaptchaSendRequest struct {
 type GuestDeviceIDRequest struct {
 	TenantKey  string `json:"tenant_key"`
 	ClientType string `json:"client_type"`
+}
+
+type PasswordRegisterRequest struct {
+	TenantKey   string `json:"tenant_key"`
+	ClientType  string `json:"client_type"`
+	Username    string `json:"username"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	DisplayName string `json:"display_name"`
+	AvatarURL   string `json:"avatar_url"`
 }
 
 type RefreshTokenRequest struct {
