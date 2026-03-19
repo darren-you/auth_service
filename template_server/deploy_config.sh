@@ -36,5 +36,5 @@ TEST_LOG_PATH=""
 # =========================================
 # 通知配置
 # =========================================
-WECHAT_WEBHOOK_URL="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=cb851699-4b2f-48e1-95f1-828229f98fe2"
-JENKINS_BUILD_URL_BASE=""
+WECHAT_WEBHOOK_URL="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=e2856bcc-f9a7-4352-95e5-1c6bdc5c6f75"
+JENKINS_BUILD_URL_BASE="https://jenkins.xdarren.com/job/${PROJECT_NAME}"
