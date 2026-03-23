@@ -1,3 +1,5 @@
-支持微信 App 登录预取一次性 state
+重构 auth_service 为 go-zero 标准 API 服务
 
-扩展 auth_service 的微信 login-url 能力，在未配置网页 redirect_uri 的 App 场景下也返回一次性 state，供业务端下发给原生 SDK 使用。
+- 迁移入口、路由、logic、ServiceContext、middleware 到 go-zero 结构
+- 使用 DDL 和 goctl model 重建认证目录、用户、身份与会话持久层
+- 收口 session、provider、phone、guest 能力，删除旧 Fiber/GORM 代码

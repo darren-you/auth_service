@@ -1,0 +1,143 @@
+syntax = "v1"
+
+info (
+	title:   "auth_service"
+	desc:    "auth service api"
+	author:  "codex"
+	version: "1.0"
+)
+
+type HealthResp {
+	Service string `json:"service"`
+}
+
+type GetLoginURLReq {
+	Provider   string `path:"provider"`
+	TenantKey  string `form:"tenant_key"`
+	ClientType string `form:"client_type"`
+}
+
+type LoginURLResp {
+	TenantKey  string `json:"tenant_key"`
+	Provider   string `json:"provider"`
+	ClientType string `json:"client_type"`
+	LoginURL   string `json:"login_url"`
+	State      string `json:"state"`
+}
+
+type ProviderCallbackReq {
+	Provider          string `path:"provider"`
+	TenantKey         string `json:"tenant_key"`
+	ClientType        string `json:"client_type"`
+	Code              string `json:"code,optional"`
+	State             string `json:"state,optional"`
+	AuthorizationCode string `json:"authorization_code,optional"`
+	Username          string `json:"username,optional"`
+	Email             string `json:"email,optional"`
+	Password          string `json:"password,optional"`
+	Phone             string `json:"phone,optional"`
+	Captcha           string `json:"captcha,optional"`
+	CaptchaKey        string `json:"captcha_key,optional"`
+	DeviceID          string `json:"device_id,optional"`
+	DisplayName       string `json:"display_name,optional"`
+	AvatarURL         string `json:"avatar_url,optional"`
+	CurrentUserID     uint64 `json:"current_user_id,optional"`
+	CurrentUserRole   string `json:"current_user_role,optional"`
+}
+
+type PasswordRegisterReq {
+	TenantKey   string `json:"tenant_key"`
+	ClientType  string `json:"client_type"`
+	Username    string `json:"username"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	DisplayName string `json:"display_name,optional"`
+	AvatarURL   string `json:"avatar_url,optional"`
+}
+
+type PhoneCaptchaSendReq {
+	TenantKey  string `json:"tenant_key"`
+	ClientType string `json:"client_type"`
+	Phone      string `json:"phone"`
+}
+
+type PhoneCaptchaSendResp {
+	TenantKey  string `json:"tenant_key"`
+	ClientType string `json:"client_type"`
+	CaptchaKey string `json:"captcha_key"`
+	ExpiresIn  int64  `json:"expires_in"`
+}
+
+type GuestDeviceIDReq {
+	TenantKey  string `json:"tenant_key"`
+	ClientType string `json:"client_type"`
+}
+
+type GuestDeviceIDResp {
+	TenantKey  string `json:"tenant_key"`
+	ClientType string `json:"client_type"`
+	DeviceID   string `json:"device_id"`
+	ExpiresIn  int64  `json:"expires_in"`
+}
+
+type RefreshReq {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type LogoutReq {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type LogoutResp {
+	Ok bool `json:"ok"`
+}
+
+type AuthUserResp {
+	Id          uint64 `json:"id"`
+	TenantKey   string `json:"tenant_key"`
+	DisplayName string `json:"display_name"`
+	AvatarURL   string `json:"avatar_url"`
+	Role        string `json:"role"`
+	Status      string `json:"status"`
+	LastLoginAt int64  `json:"last_login_at,optional"`
+}
+
+type SessionResp {
+	TenantKey    string       `json:"tenant_key"`
+	Provider     string       `json:"provider"`
+	ClientType   string       `json:"client_type"`
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
+	ExpiresIn    int64        `json:"expires_in"`
+	User         AuthUserResp `json:"user"`
+}
+
+service auth {
+	@handler Health
+	get /api/v1/health returns (HealthResp)
+
+	@handler GetLoginURL
+	get /api/v1/auth/providers/:provider/login-url (GetLoginURLReq) returns (LoginURLResp)
+
+	@handler RegisterPassword
+	post /api/v1/auth/providers/password/register (PasswordRegisterReq) returns (SessionResp)
+
+	@handler ProviderCallback
+	post /api/v1/auth/providers/:provider/callback (ProviderCallbackReq) returns (SessionResp)
+
+	@handler SendPhoneCaptcha
+	post /api/v1/auth/providers/phone/send-captcha (PhoneCaptchaSendReq) returns (PhoneCaptchaSendResp)
+
+	@handler IssueGuestDeviceID
+	post /api/v1/auth/providers/guest/device-id (GuestDeviceIDReq) returns (GuestDeviceIDResp)
+
+	@handler Refresh
+	post /api/v1/auth/refresh (RefreshReq) returns (SessionResp)
+
+	@handler Logout
+	post /api/v1/auth/logout (LogoutReq) returns (LogoutResp)
+
+	@handler Me
+	get /api/v1/auth/me returns (AuthUserResp)
+}
+
