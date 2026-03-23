@@ -1,5 +1,4 @@
-重构 auth_service 为 go-zero 标准 API 服务
+修复 auth_service go-zero 版本的 Docker 构建入口
 
-- 迁移入口、路由、logic、ServiceContext、middleware 到 go-zero 结构
-- 使用 DDL 和 goctl model 重建认证目录、用户、身份与会话持久层
-- 收口 session、provider、phone、guest 能力，删除旧 Fiber/GORM 代码
+- 将镜像构建入口从旧的 template_server/cmd/server 切换到当前 go-zero 主程序目录
+- 使 Jenkins 生产流水线能够正确编译 auth_service_server

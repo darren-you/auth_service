@@ -17,7 +17,7 @@ ARG PROJECT_NAME
 ARG TARGETOS
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -mod=vendor -trimpath -ldflags="-s -w" -o /out/${PROJECT_NAME} ./template_server/cmd/server
+    go build -mod=vendor -trimpath -ldflags="-s -w" -o /out/${PROJECT_NAME} ./template_server
 
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_REGISTRY}/${RUNTIME_BASE_IMAGE}
 
