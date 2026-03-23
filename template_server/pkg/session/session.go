@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 const (
@@ -119,6 +120,7 @@ func generateAccessTokenWithProfile(userID uint, username, email, role, tenantKe
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    cfg.normalizedIssuer(),
 			Subject:   fmt.Sprintf("%d", userID),
+			ID:        uuid.NewString(),
 		},
 	}
 
@@ -141,6 +143,7 @@ func GenerateRefreshToken(userID uint, cfg Config) (string, error) {
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    cfg.normalizedIssuer(),
 			Subject:   fmt.Sprintf("%d", userID),
+			ID:        uuid.NewString(),
 		},
 	}
 
