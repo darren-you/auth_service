@@ -1,3 +1,4 @@
 [submodule "deploy_shell"]
 	path = deploy_shell
 	url = git@github.com:darren-you/deploy_shell.git
+	branch = master
