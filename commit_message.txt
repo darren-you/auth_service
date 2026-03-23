@@ -1,3 +1,3 @@
-同步 deploy_shell 子模块
+支持微信 App 登录预取一次性 state
 
-将仓库内的 deploy_shell 指针统一更新到根 deploy_shell 当前 master 提交，收口 Jenkins 通知改造并补齐 pay_service_server 工程配置。
+扩展 auth_service 的微信 login-url 能力，在未配置网页 redirect_uri 的 App 场景下也返回一次性 state，供业务端下发给原生 SDK 使用。

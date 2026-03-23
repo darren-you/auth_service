@@ -6,7 +6,7 @@
 
 ## 核心能力
 
-- 微信 Web/App 登录
+- 微信 Web/App 登录（App 侧通过 `login-url` 预取一次性 `state`）
 - Apple 登录
 - 手机验证码登录
 - 游客登录

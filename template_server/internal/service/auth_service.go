@@ -130,6 +130,16 @@ func (s *authService) GetLoginURL(ctx context.Context, tenantKey string, provide
 		return nil, err
 	}
 
+	if providerConfig.ClientType == "app" && strings.TrimSpace(providerConfig.RedirectURI) == "" {
+		return &dto.LoginURLResponse{
+			TenantKey:  tenant.TenantKey,
+			Provider:   provider,
+			ClientType: providerConfig.ClientType,
+			LoginURL:   "",
+			State:      state,
+		}, nil
+	}
+
 	client := authwechat.NewClient(authwechat.Config{
 		AppID:          providerConfig.AppID,
 		AppSecret:      providerConfig.AppSecret,
