@@ -1,4 +1,4 @@
-修复 auth_service 刷新令牌重复签发问题
+补充 auth_service refresh 链路诊断日志
 
-- 为 access token 和 refresh token 增加唯一 jti，避免同秒重复签发生成相同 refresh token
-- 修复 auth_sessions.refresh_token_hash 唯一索引冲突导致的 refresh 500
+- 在 refresh 查询 session、解析 metadata、查询 tenant、撤销旧 session、签发新 session 的关键节点输出错误日志
+- 便于定位生产环境 refresh 500 的真实失败位置

@@ -280,6 +280,7 @@ func (s *authFlow) Refresh(req *RefreshTokenRequest) (*SessionResponse, error) {
 
 	sessionRecord, err := s.svcCtx.AuthRepo.FindSessionByHash(s.ctx, hashToken(refreshToken))
 	if err != nil {
+		s.Errorf("refresh find session failed: hash=%s err=%v", hashToken(refreshToken), err)
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
 	if sessionRecord == nil {
@@ -294,6 +295,7 @@ func (s *authFlow) Refresh(req *RefreshTokenRequest) (*SessionResponse, error) {
 
 	metadata, err := parseSessionMetadata(sessionRecord.MetadataJSON)
 	if err != nil {
+		s.Errorf("refresh parse session metadata failed: auth_user_id=%d err=%v", sessionRecord.AuthUserID, err)
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
 	if metadata.TokenUserID == 0 || metadata.TokenUserID != claims.UserID {
@@ -302,6 +304,7 @@ func (s *authFlow) Refresh(req *RefreshTokenRequest) (*SessionResponse, error) {
 
 	tenant, err := s.svcCtx.AuthRepo.FindTenantByID(s.ctx, sessionRecord.TenantID)
 	if err != nil {
+		s.Errorf("refresh find tenant failed: tenant_id=%d err=%v", sessionRecord.TenantID, err)
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
 	if tenant == nil {
@@ -309,16 +312,22 @@ func (s *authFlow) Refresh(req *RefreshTokenRequest) (*SessionResponse, error) {
 	}
 
 	if err := s.svcCtx.AuthRepo.RevokeSessionByHash(s.ctx, sessionRecord.RefreshTokenHash, time.Now()); err != nil {
+		s.Errorf("refresh revoke session failed: auth_user_id=%d hash=%s err=%v", sessionRecord.AuthUserID, sessionRecord.RefreshTokenHash, err)
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
 
-	return s.issueSession(tenant, sessionRecord.AuthUserID, sessionRecord.Provider, sessionRecord.ClientType, &businessUserProfile{
+	resp, err := s.issueSession(tenant, sessionRecord.AuthUserID, sessionRecord.Provider, sessionRecord.ClientType, &businessUserProfile{
 		UserID:      metadata.TokenUserID,
 		DisplayName: metadata.DisplayName,
 		AvatarURL:   metadata.AvatarURL,
 		Role:        metadata.Role,
 		Status:      metadata.Status,
 	})
+	if err != nil {
+		s.Errorf("refresh issue session failed: tenant_id=%d auth_user_id=%d business_user_id=%d err=%v", sessionRecord.TenantID, sessionRecord.AuthUserID, metadata.TokenUserID, err)
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *authFlow) Logout(req *LogoutRequest) error {
