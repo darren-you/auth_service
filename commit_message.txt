@@ -1,3 +1,4 @@
-修复会话时间空值导致刷新失败
+同步工作区文档归档规则
 
-兼容生产历史 auth_sessions 空时间字段，避免 refresh 流程在会话扫描阶段报错。
+- 更新 AGENTS.md 中的工作区文档路径说明
+- 对齐 docs/projects、docs/topics、docs/workspace 新规则
