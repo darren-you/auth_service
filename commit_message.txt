@@ -1,4 +1,3 @@
-补充 auth_service refresh 链路诊断日志
+修复会话时间空值导致刷新失败
 
-- 在 refresh 查询 session、解析 metadata、查询 tenant、撤销旧 session、签发新 session 的关键节点输出错误日志
-- 便于定位生产环境 refresh 500 的真实失败位置
+兼容生产历史 auth_sessions 空时间字段，避免 refresh 流程在会话扫描阶段报错。

@@ -48,8 +48,8 @@ type (
 		RevokedAt        sql.NullTime `db:"revoked_at"`
 		LastSeenAt       sql.NullTime `db:"last_seen_at"`
 		MetadataJson     string       `db:"metadata_json"`
-		CreatedAt        time.Time    `db:"created_at"`
-		UpdatedAt        time.Time    `db:"updated_at"`
+		CreatedAt        sql.NullTime `db:"created_at"`
+		UpdatedAt        sql.NullTime `db:"updated_at"`
 	}
 )
 

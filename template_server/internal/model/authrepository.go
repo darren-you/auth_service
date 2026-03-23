@@ -468,8 +468,8 @@ func fromSessionRecord(record *AuthSessions) *AuthSession {
 		RevokedAt:        revokedAt,
 		LastSeenAt:       lastSeenAt,
 		MetadataJSON:     record.MetadataJson,
-		CreatedAt:        record.CreatedAt,
-		UpdatedAt:        record.UpdatedAt,
+		CreatedAt:        nullTimeOrZero(record.CreatedAt),
+		UpdatedAt:        nullTimeOrZero(record.UpdatedAt),
 	}
 }
 
@@ -504,6 +504,13 @@ func boolToInt64(value bool) int64 {
 		return 1
 	}
 	return 0
+}
+
+func nullTimeOrZero(value sql.NullTime) time.Time {
+	if value.Valid {
+		return value.Time
+	}
+	return time.Time{}
 }
 
 func normalizeRecordKey(value string) string {
