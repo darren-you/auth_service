@@ -1,4 +1,3 @@
-同步工作区文档归档规则
+延长登录令牌有效期配置
 
-- 更新 AGENTS.md 中的工作区文档路径说明
-- 对齐 docs/projects、docs/topics、docs/workspace 新规则
+将 access token 调整为 2 小时、refresh token 调整为 90 天，并同步配置默认值。

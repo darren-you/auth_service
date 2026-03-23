@@ -71,8 +71,8 @@ type LogConfig struct {
 type JWTConfig struct {
 	Secret             string `json:"secret"`
 	Issuer             string `json:"issuer,default=auth_service"`
-	AccessExpiry       int    `json:"access_expiry,default=3600"`
-	RefreshExpiry      int    `json:"refresh_expiry,default=604800"`
+	AccessExpiry       int    `json:"access_expiry,default=7200"`
+	RefreshExpiry      int    `json:"refresh_expiry,default=7776000"`
 	AccessTokenType    string `json:"access_token_type,default=access"`
 	RefreshTokenType   string `json:"refresh_token_type,default=refresh"`
 	ExpiringSoonWindow int    `json:"expiring_soon_window,default=900"`
@@ -267,10 +267,10 @@ func normalizeConfig(cfg *Config) {
 	cfg.JWT.Secret = strings.TrimSpace(cfg.JWT.Secret)
 	cfg.JWT.Issuer = fallbackString(cfg.JWT.Issuer, "auth_service")
 	if cfg.JWT.AccessExpiry <= 0 {
-		cfg.JWT.AccessExpiry = 3600
+		cfg.JWT.AccessExpiry = 7200
 	}
 	if cfg.JWT.RefreshExpiry <= 0 {
-		cfg.JWT.RefreshExpiry = 604800
+		cfg.JWT.RefreshExpiry = 7776000
 	}
 	cfg.JWT.AccessTokenType = fallbackString(cfg.JWT.AccessTokenType, "access")
 	cfg.JWT.RefreshTokenType = fallbackString(cfg.JWT.RefreshTokenType, "refresh")

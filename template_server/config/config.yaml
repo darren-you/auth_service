@@ -37,8 +37,8 @@ log:
 jwt:
   secret: replace-with-a-strong-secret
   issuer: auth_service
-  access_expiry: 3600
-  refresh_expiry: 604800
+  access_expiry: 7200
+  refresh_expiry: 7776000
 
 auth:
   state_ttl_second: 300
