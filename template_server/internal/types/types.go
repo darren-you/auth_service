@@ -87,6 +87,8 @@ type ProviderCallbackReq struct {
 	Phone             string `json:"phone,optional"`
 	Captcha           string `json:"captcha,optional"`
 	CaptchaKey        string `json:"captcha_key,optional"`
+	Token             string `json:"token,optional"`
+	Gyuid             string `json:"gyuid,optional"`
 	DeviceID          string `json:"device_id,optional"`
 	DisplayName       string `json:"display_name,optional"`
 	AvatarURL         string `json:"avatar_url,optional"`

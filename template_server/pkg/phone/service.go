@@ -90,14 +90,14 @@ func (s *Service) Send(ctx context.Context, phone string) (*SendResult, error) {
 		return nil, err
 	}
 
-	if err := s.store.Set(ctx, phone, string(payload), s.config.TTL); err != nil {
-		return nil, err
-	}
-
 	if !isTestPhone && s.sender != nil {
 		if err := s.sender.SendCaptcha(phone, int(s.config.TTL/time.Minute), captcha); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := s.store.Set(ctx, phone, string(payload), s.config.TTL); err != nil {
+		return nil, err
 	}
 
 	return &SendResult{

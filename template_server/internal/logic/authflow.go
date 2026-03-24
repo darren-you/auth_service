@@ -19,6 +19,8 @@ import (
 	authguest "github.com/darren-you/auth_service/template_server/pkg/guest"
 	authphone "github.com/darren-you/auth_service/template_server/pkg/phone"
 	authapple "github.com/darren-you/auth_service/template_server/pkg/provider/apple"
+	authgetui "github.com/darren-you/auth_service/template_server/pkg/provider/getui"
+	authtencentsms "github.com/darren-you/auth_service/template_server/pkg/provider/tencentsms"
 	authwechat "github.com/darren-you/auth_service/template_server/pkg/provider/wechat"
 	"github.com/darren-you/auth_service/template_server/pkg/session"
 	"github.com/google/uuid"
@@ -192,49 +194,6 @@ func (s *authFlow) RegisterPassword(req *PasswordRegisterRequest) (*SessionRespo
 	}
 
 	return s.issuePasswordSession(tenant, providerConfig, businessUser, username, req.AvatarURL)
-}
-
-func (s *authFlow) SendPhoneCaptcha(req *PhoneCaptchaSendRequest) (*PhoneCaptchaSendResponse, error) {
-	tenant, providerConfig, err := s.resolveTenantAndProvider(req.TenantKey, "phone", req.ClientType)
-	if err != nil {
-		return nil, err
-	}
-
-	phone := strings.TrimSpace(req.Phone)
-	if phone == "" {
-		return nil, appErrors.ErrBadRequest
-	}
-
-	if providerConfig.TestPhone == "" || phone != providerConfig.TestPhone {
-		return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "phone sender is not configured for non-test phone", nil)
-	}
-
-	phoneService := authphone.NewService(
-		phoneCaptchaStoreAdapter{
-			store:  s.svcCtx.KVStore,
-			prefix: s.phoneCaptchaPrefix(tenant.TenantKey, providerConfig.ClientType),
-		},
-		nil,
-		authphone.Config{
-			TestPhone:      providerConfig.TestPhone,
-			TestCaptcha:    providerConfig.TestCaptcha,
-			TestCaptchaKey: providerConfig.TestCaptchaKey,
-			TTL:            time.Duration(s.svcCtx.Config.Auth.PhoneCaptchaTTLSecond) * time.Second,
-			CaptchaLength:  4,
-		},
-	)
-
-	result, err := phoneService.Send(s.ctx, phone)
-	if err != nil {
-		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
-	}
-
-	return &PhoneCaptchaSendResponse{
-		TenantKey:  tenant.TenantKey,
-		ClientType: providerConfig.ClientType,
-		CaptchaKey: result.CaptchaKey,
-		ExpiresIn:  int64(result.ExpiresIn),
-	}, nil
 }
 
 func (s *authFlow) IssueGuestDeviceID(req *GuestDeviceIDRequest) (*GuestDeviceIDResponse, error) {
@@ -514,47 +473,16 @@ func (s *authFlow) loginWithPhone(req *ProviderCallbackRequest) (*SessionRespons
 		return nil, err
 	}
 
-	phone := strings.TrimSpace(req.Phone)
-	if phone == "" || strings.TrimSpace(req.Captcha) == "" || strings.TrimSpace(req.CaptchaKey) == "" {
+	hasCaptchaMode := strings.TrimSpace(req.Phone) != "" || strings.TrimSpace(req.Captcha) != "" || strings.TrimSpace(req.CaptchaKey) != ""
+	hasOneClickMode := strings.TrimSpace(req.Token) != "" || strings.TrimSpace(req.Gyuid) != ""
+	if hasCaptchaMode == hasOneClickMode {
 		return nil, appErrors.ErrBadRequest
 	}
 
-	phoneService := authphone.NewService(
-		phoneCaptchaStoreAdapter{
-			store:  s.svcCtx.KVStore,
-			prefix: s.phoneCaptchaPrefix(tenant.TenantKey, providerConfig.ClientType),
-		},
-		nil,
-		authphone.Config{
-			TestPhone:      providerConfig.TestPhone,
-			TestCaptcha:    providerConfig.TestCaptcha,
-			TestCaptchaKey: providerConfig.TestCaptchaKey,
-			TTL:            time.Duration(s.svcCtx.Config.Auth.PhoneCaptchaTTLSecond) * time.Second,
-			CaptchaLength:  4,
-		},
-	)
-	if err := phoneService.Verify(s.ctx, authphone.VerifyRequest{
-		Phone:      phone,
-		Captcha:    req.Captcha,
-		CaptchaKey: req.CaptchaKey,
-	}); err != nil {
-		return nil, appErrors.ErrCaptchaInvalid
+	if hasCaptchaMode {
+		return s.loginWithPhoneCaptcha(tenant, providerConfig, req)
 	}
-
-	displayName := firstNonEmpty(req.DisplayName, maskPhone(phone))
-	user, err := s.upsertIdentityUser(tenant, providerConfig, "phone", phone, "", displayName, req.AvatarURL, "user", marshalJSON(map[string]string{"phone": phone}))
-	if err != nil {
-		return nil, err
-	}
-	businessUser, err := s.syncBusinessUser(tenant.TenantKey, "phone", providerConfig.ClientType, businessBridgeRequest{
-		Phone:       phone,
-		DisplayName: displayName,
-		AvatarURL:   req.AvatarURL,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return s.issueSession(tenant, user.ID, "phone", providerConfig.ClientType, businessUser)
+	return s.loginWithPhoneOneClick(tenant, providerConfig, req)
 }
 
 func (s *authFlow) loginWithGuest(req *ProviderCallbackRequest) (*SessionResponse, error) {
@@ -962,6 +890,206 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func (s *authFlow) SendPhoneCaptcha(req *PhoneCaptchaSendRequest) (*PhoneCaptchaSendResponse, error) {
+	tenant, providerConfig, err := s.resolveTenantAndProvider(req.TenantKey, "phone", req.ClientType)
+	if err != nil {
+		return nil, err
+	}
+
+	phone := strings.TrimSpace(req.Phone)
+	if phone == "" {
+		return nil, appErrors.ErrBadRequest
+	}
+
+	var sender authphone.Sender
+	isTestPhone := providerConfig.TestPhone != "" && phone == providerConfig.TestPhone
+	if !isTestPhone {
+		extra, err := parsePhoneProviderExtra(providerConfig.ExtraJSON)
+		if err != nil {
+			return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "phone provider extra_json is invalid", err)
+		}
+		if extra.SMS == nil || !extra.SMS.IsConfigured() {
+			return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "phone sender is not configured", nil)
+		}
+		sender = authtencentsms.NewSender(authtencentsms.Config{
+			SecretID:    extra.SMS.SecretID,
+			SecretKey:   extra.SMS.SecretKey,
+			SmsSDKAppID: extra.SMS.SmsSDKAppID,
+			SignName:    extra.SMS.SignName,
+			TemplateID:  extra.SMS.TemplateID,
+			Region:      extra.SMS.Region,
+		})
+	}
+
+	phoneService := s.newPhoneService(tenant.TenantKey, providerConfig, sender)
+	result, err := phoneService.Send(s.ctx, phone)
+	if err != nil {
+		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+	}
+
+	return &PhoneCaptchaSendResponse{
+		TenantKey:  tenant.TenantKey,
+		ClientType: providerConfig.ClientType,
+		CaptchaKey: result.CaptchaKey,
+		ExpiresIn:  int64(result.ExpiresIn),
+	}, nil
+}
+
+func (s *authFlow) loginWithPhoneCaptcha(tenant *model.AuthTenant, providerConfig *model.AuthProviderConfig, req *ProviderCallbackRequest) (*SessionResponse, error) {
+	phone := strings.TrimSpace(req.Phone)
+	captcha := strings.TrimSpace(req.Captcha)
+	captchaKey := strings.TrimSpace(req.CaptchaKey)
+	if phone == "" || captcha == "" || captchaKey == "" {
+		return nil, appErrors.ErrBadRequest
+	}
+
+	phoneService := s.newPhoneService(tenant.TenantKey, providerConfig, nil)
+	if err := phoneService.Verify(s.ctx, authphone.VerifyRequest{
+		Phone:      phone,
+		Captcha:    captcha,
+		CaptchaKey: captchaKey,
+	}); err != nil {
+		return nil, appErrors.ErrCaptchaInvalid
+	}
+
+	return s.issuePhoneSession(tenant, providerConfig, phone, req.DisplayName, req.AvatarURL, map[string]string{
+		"phone":        phone,
+		"login_method": "captcha",
+	})
+}
+
+func (s *authFlow) loginWithPhoneOneClick(tenant *model.AuthTenant, providerConfig *model.AuthProviderConfig, req *ProviderCallbackRequest) (*SessionResponse, error) {
+	token := strings.TrimSpace(req.Token)
+	gyuid := strings.TrimSpace(req.Gyuid)
+	if token == "" || gyuid == "" {
+		return nil, appErrors.ErrBadRequest
+	}
+
+	extra, err := parsePhoneProviderExtra(providerConfig.ExtraJSON)
+	if err != nil {
+		return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "phone provider extra_json is invalid", err)
+	}
+	if extra.Getui == nil || !extra.Getui.IsConfigured() {
+		return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "getui quick login is not configured", nil)
+	}
+
+	client := authgetui.NewClient(authgetui.Config{
+		AppID:        extra.Getui.AppID,
+		AppKey:       extra.Getui.AppKey,
+		AppSecret:    extra.Getui.AppSecret,
+		MasterSecret: extra.Getui.MasterSecret,
+		BaseURL:      extra.Getui.BaseURL,
+	})
+	phone, err := client.OneClickLogin(s.ctx, token, gyuid)
+	if err != nil {
+		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+	}
+
+	return s.issuePhoneSession(tenant, providerConfig, phone, req.DisplayName, req.AvatarURL, map[string]string{
+		"phone":        phone,
+		"login_method": "one_click",
+		"gyuid":        gyuid,
+	})
+}
+
+func (s *authFlow) issuePhoneSession(tenant *model.AuthTenant, providerConfig *model.AuthProviderConfig, phone string, displayName string, avatarURL string, profile map[string]string) (*SessionResponse, error) {
+	displayName = firstNonEmpty(displayName, maskPhone(phone))
+	user, err := s.upsertIdentityUser(tenant, providerConfig, "phone", phone, "", displayName, avatarURL, "user", marshalJSON(profile))
+	if err != nil {
+		return nil, err
+	}
+	businessUser, err := s.syncBusinessUser(tenant.TenantKey, "phone", providerConfig.ClientType, businessBridgeRequest{
+		Phone:       phone,
+		DisplayName: displayName,
+		AvatarURL:   avatarURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.issueSession(tenant, user.ID, "phone", providerConfig.ClientType, businessUser)
+}
+
+func (s *authFlow) newPhoneService(tenantKey string, providerConfig *model.AuthProviderConfig, sender authphone.Sender) *authphone.Service {
+	return authphone.NewService(
+		phoneCaptchaStoreAdapter{
+			store:  s.svcCtx.KVStore,
+			prefix: s.phoneCaptchaPrefix(tenantKey, providerConfig.ClientType),
+		},
+		sender,
+		authphone.Config{
+			TestPhone:      providerConfig.TestPhone,
+			TestCaptcha:    providerConfig.TestCaptcha,
+			TestCaptchaKey: providerConfig.TestCaptchaKey,
+			TTL:            time.Duration(s.svcCtx.Config.Auth.PhoneCaptchaTTLSecond) * time.Second,
+			CaptchaLength:  4,
+		},
+	)
+}
+
+type phoneProviderExtra struct {
+	SMS   *phoneSMSExtra   `json:"sms,omitempty"`
+	Getui *phoneGetuiExtra `json:"getui,omitempty"`
+}
+
+type phoneSMSExtra struct {
+	SecretID    string `json:"secret_id,omitempty"`
+	SecretKey   string `json:"secret_key,omitempty"`
+	SmsSDKAppID string `json:"sms_sdk_app_id,omitempty"`
+	SignName    string `json:"sign_name,omitempty"`
+	TemplateID  string `json:"template_id,omitempty"`
+	Region      string `json:"region,omitempty"`
+}
+
+type phoneGetuiExtra struct {
+	AppID        string `json:"app_id,omitempty"`
+	AppKey       string `json:"app_key,omitempty"`
+	AppSecret    string `json:"app_secret,omitempty"`
+	MasterSecret string `json:"master_secret,omitempty"`
+	BaseURL      string `json:"base_url,omitempty"`
+}
+
+func parsePhoneProviderExtra(raw string) (*phoneProviderExtra, error) {
+	extra := &phoneProviderExtra{}
+	if strings.TrimSpace(raw) == "" {
+		return extra, nil
+	}
+	if err := json.Unmarshal([]byte(raw), extra); err != nil {
+		return nil, err
+	}
+	if extra.SMS != nil {
+		extra.SMS.SecretID = strings.TrimSpace(extra.SMS.SecretID)
+		extra.SMS.SecretKey = strings.TrimSpace(extra.SMS.SecretKey)
+		extra.SMS.SmsSDKAppID = strings.TrimSpace(extra.SMS.SmsSDKAppID)
+		extra.SMS.SignName = strings.TrimSpace(extra.SMS.SignName)
+		extra.SMS.TemplateID = strings.TrimSpace(extra.SMS.TemplateID)
+		extra.SMS.Region = strings.TrimSpace(extra.SMS.Region)
+	}
+	if extra.Getui != nil {
+		extra.Getui.AppID = strings.TrimSpace(extra.Getui.AppID)
+		extra.Getui.AppKey = strings.TrimSpace(extra.Getui.AppKey)
+		extra.Getui.AppSecret = strings.TrimSpace(extra.Getui.AppSecret)
+		extra.Getui.MasterSecret = strings.TrimSpace(extra.Getui.MasterSecret)
+		extra.Getui.BaseURL = strings.TrimSpace(extra.Getui.BaseURL)
+	}
+	return extra, nil
+}
+
+func (c *phoneSMSExtra) IsConfigured() bool {
+	return c != nil &&
+		c.SecretID != "" &&
+		c.SecretKey != "" &&
+		c.SmsSDKAppID != "" &&
+		c.SignName != "" &&
+		c.TemplateID != ""
+}
+
+func (c *phoneGetuiExtra) IsConfigured() bool {
+	return c != nil &&
+		c.AppID != "" &&
+		c.AppSecret != "" &&
+		c.MasterSecret != ""
 }
 
 type phoneCaptchaStoreAdapter struct {

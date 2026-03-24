@@ -9,6 +9,7 @@
 - 微信 Web/App 登录（App 侧通过 `login-url` 预取一次性 `state`）
 - Apple 登录
 - 手机验证码登录
+- Getui 手机号快捷登录
 - 游客登录
 - 多租户 `tenant / provider / client_type` 配置同步
 - `access token / refresh token` 签发与轮换

@@ -78,6 +78,8 @@ auth:
           test_phone: "18912345678"
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
+          extra_json: >-
+            {"sms":{"secret_id":"AKID1wjLk7MYcWEiy2yhD1d2DAvSlqpkVM7r","secret_key":"Qo073mIbkgZGk170qVyUvAC5nYFqJcjf","sms_sdk_app_id":"1400948323","sign_name":"青白江游同学工作室","template_id":"2310769","region":"ap-guangzhou"},"getui":{"app_id":"oRCEM65L0U7xxQCA4fsmG7","app_key":"CzBAvvECfV6hjMPGrhDWi1","app_secret":"0k0SEwsFCX7WDs48L2MjS1","master_secret":"8nDhplSNwK9ZHvpK6D4aX9","base_url":"https://h-gy.getui.net/v2/gy/ct_login/gy_get_pn"}}
         - provider: guest
           client_type: app
           enabled: true
