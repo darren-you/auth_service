@@ -1,3 +1,3 @@
-升级 deploy_shell 子模块到通知新模板
+接入 workspace_secret_base 服务端配置链路
 
-统一使用 emoji + title: detail 通知格式，并启用加粗标题样式。
+改造 template_server 的 Dockerfile、deploy_config 和模板 YAML，移除仓库内真实 secret，并同步跟进 deploy_shell 的新渲染链路。

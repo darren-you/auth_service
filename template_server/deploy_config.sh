@@ -19,6 +19,9 @@ apply_deploy_profile_defaults "$DEPLOY_SERVER_PROFILE" "server"
 # 项目特定
 # =========================================
 REMOTE_CONTAINER_PORT="8080"
+SECRET_BASE_ENABLED="true"
+SECRET_BASE_REPO="auth_service"
+SECRET_BASE_SUBPROJECT="template_server"
 DOCKERFILE_PATH="$PROJECT_ROOT/Dockerfile"
 DOCKER_BUILD_CONTEXT="$PROJECT_ROOT/.."
 BASE_IMAGE_REGISTRY_CANDIDATES="docker.m.daocloud.io,docker.io"

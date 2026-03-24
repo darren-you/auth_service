@@ -18,7 +18,7 @@ mysql:
   host: 1Panel-mysql-RHnT
   port: 3306
   user: service_runner
-  password: ServiceMysql_20260312
+  password: "{{ secret `mysql.password` }}"
   database: auth_service_test
   max_open_conns: 100
   max_idle_conns: 10
@@ -26,7 +26,7 @@ mysql:
 
 redis:
   addr: 1Panel-redis-PDvy:6379
-  password: 6rw332GfSPWW8nBF
+  password: "{{ secret `redis.password` }}"
   db: 2
   pool_size: 10
 
@@ -35,7 +35,7 @@ log:
   file: logs/app.log
 
 jwt:
-  secret: auth-service-prod-secret-20260318
+  secret: "{{ secret `jwt.secret` }}"
   issuer: auth_service
   access_expiry: 7200
   refresh_expiry: 7776000
@@ -49,26 +49,20 @@ auth:
       name: Stellar
       enabled: true
       bridge_base_url: https://stellar.xdarren.com
-      bridge_auth_key: stellar-auth-bridge-20260318
+      bridge_auth_key: "{{ secret `auth.tenants.stellar.bridge_auth_key` }}"
       providers:
         - provider: wechat
           client_type: app
           enabled: true
           app_id: wxd5551e8aab2c8f3e
-          app_secret: 7700f77852adb5d5afcf4cef5ea5ab3f
+          app_secret: "{{ secret `auth.tenants.stellar.providers.wechat.app_secret` }}"
         - provider: apple
           client_type: ios
           enabled: true
           client_id: com.xdarren.stellar
           team_id: X4L9Z2674W
           key_id: 3R537T99VJ
-          signing_key: |-
-            -----BEGIN PRIVATE KEY-----
-            MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQghlPYOg+YT1sSUjCj
-            I3g3M6ilr6nTeWy96QxQd0sUl42gCgYIKoZIzj0DAQehRANCAAR1k4hLlm5Ya8tM
-            e2R6TQJnpeFcaiVx26o0z/NZBZjFI7dIqvsZ15HQ7meCcjw/JOx5FjfATm2UHNCz
-            Edeyk1CH
-            -----END PRIVATE KEY-----
+          signing_key: "{{ secret `auth.tenants.stellar.providers.apple.signing_key` }}"
         - provider: password
           client_type: app
           enabled: true
@@ -78,8 +72,7 @@ auth:
           test_phone: "18912345678"
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
-          extra_json: >-
-            {"sms":{"secret_id":"AKID1wjLk7MYcWEiy2yhD1d2DAvSlqpkVM7r","secret_key":"Qo073mIbkgZGk170qVyUvAC5nYFqJcjf","sms_sdk_app_id":"1400948323","sign_name":"青白江游同学工作室","template_id":"2310769","region":"ap-guangzhou"},"getui":{"app_id":"oRCEM65L0U7xxQCA4fsmG7","app_key":"CzBAvvECfV6hjMPGrhDWi1","app_secret":"0k0SEwsFCX7WDs48L2MjS1","master_secret":"8nDhplSNwK9ZHvpK6D4aX9","base_url":"https://h-gy.getui.net/v2/gy/ct_login/gy_get_pn"}}
+          extra_json: "{{ secret `auth.tenants.stellar.providers.phone.extra_json` }}"
         - provider: guest
           client_type: app
           enabled: true
@@ -87,20 +80,20 @@ auth:
       name: TinyText
       enabled: true
       bridge_base_url: https://tinytext.xdarren.com
-      bridge_auth_key: tinytext-auth-bridge-20260318
+      bridge_auth_key: "{{ secret `auth.tenants.tinytext.bridge_auth_key` }}"
       providers:
         - provider: wechat
           client_type: web
           enabled: true
           app_id: wxbb79bd2eb7ece73a
-          app_secret: cc1cdc4343d24d46bfdb7dc2cf15cb06
+          app_secret: "{{ secret `auth.tenants.tinytext.providers.wechat.app_secret` }}"
           redirect_uri: https://tinytext.xdarren.com/wechat/callback
           scope: snsapi_login
     - key: template_project
       name: Template Project
       enabled: true
       bridge_base_url: http://124.221.158.155:8104
-      bridge_auth_key: template-project-auth-bridge-20260318
+      bridge_auth_key: "{{ secret `auth.tenants.template_project.bridge_auth_key` }}"
       providers:
         - provider: password
           client_type: default
@@ -109,7 +102,7 @@ auth:
       name: Imagen
       enabled: true
       bridge_base_url: http://124.221.158.155:8102
-      bridge_auth_key: imagen-auth-bridge-20260318
+      bridge_auth_key: "{{ secret `auth.tenants.imagen.bridge_auth_key` }}"
       providers:
         - provider: password
           client_type: default
@@ -118,7 +111,7 @@ auth:
       name: Notification
       enabled: true
       bridge_base_url: http://124.221.158.155:8103
-      bridge_auth_key: notification-auth-bridge-20260318
+      bridge_auth_key: "{{ secret `auth.tenants.notification.bridge_auth_key` }}"
       providers:
         - provider: password
           client_type: default

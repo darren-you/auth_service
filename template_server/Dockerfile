@@ -31,12 +31,7 @@ ARG REMOTE_CONTAINER_PORT
 ENV PROJECT_NAME=${PROJECT_NAME}
 
 COPY --from=builder /out/ /out/
-COPY --from=builder /src/template_server/config ./config
-RUN case "$BUILD_ENV" in \
-      prod) cp ./config/config.prod.yaml ./config/config.yaml ;; \
-      test) cp ./config/config.dev.yaml ./config/config.yaml ;; \
-      *) echo "unsupported BUILD_ENV: $BUILD_ENV" >&2; exit 1 ;; \
-    esac
+RUN mkdir -p /app/config
 RUN cp "/out/${PROJECT_NAME}" /usr/local/bin/server && rm -rf /out
 
 EXPOSE ${REMOTE_CONTAINER_PORT}
