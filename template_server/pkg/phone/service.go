@@ -112,6 +112,13 @@ func (s *Service) Verify(ctx context.Context, req VerifyRequest) error {
 		return ErrInvalidCaptcha
 	}
 
+	isTestPhone := strings.TrimSpace(s.config.TestPhone) != "" && phone == strings.TrimSpace(s.config.TestPhone)
+	if isTestPhone &&
+		strings.TrimSpace(req.Captcha) == strings.TrimSpace(s.config.TestCaptcha) &&
+		strings.TrimSpace(req.CaptchaKey) == strings.TrimSpace(s.config.TestCaptchaKey) {
+		return nil
+	}
+
 	stored, err := s.store.Get(ctx, phone)
 	if err != nil {
 		return ErrInvalidCaptcha
@@ -129,7 +136,6 @@ func (s *Service) Verify(ctx context.Context, req VerifyRequest) error {
 		return ErrInvalidCaptcha
 	}
 
-	isTestPhone := strings.TrimSpace(s.config.TestPhone) != "" && phone == strings.TrimSpace(s.config.TestPhone)
 	if !isTestPhone {
 		_ = s.store.Delete(ctx, phone)
 	}
