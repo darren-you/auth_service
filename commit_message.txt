@@ -1,3 +1,3 @@
-同步 deploy_shell 修复 secret_base 重复加载错误
+同步 deploy_shell 修复配置目录挂载链路
 
-将 deploy_shell 子模块升级到修复 common.sh 与 remote.sh 重复 source 报错的提交，恢复 workspace_secret_base 生产部署链路。
+将 deploy_shell 子模块升级到修复 workspace_secret_base 配置目录只读挂载链路的提交，恢复生产部署稳定性。
