@@ -1,3 +1,3 @@
-同步 deploy_shell 修复目录权限链路
+校正认证服务 README 文档
 
-将 deploy_shell 子模块升级到修复 workspace_secret_base 目录所有权与权限链路的提交，恢复生产部署稳定性。
+补充当前目录结构与密码注册接口说明，避免入口文档遗漏真实能力。

@@ -2,7 +2,14 @@
 
 ## 项目定位
 
-`auth_service/template_server` 是统一认证域的独立服务实现，负责多租户认证配置同步、第三方登录编排、会话签发、刷新、登出和 `me` 查询。
+`auth_service/template_server` 是统一认证域的服务子工程，基于 `go-zero` 提供多租户认证配置、第三方登录编排、会话签发、刷新、登出和 `me` 查询能力。
+
+## 当前目录重点
+
+- `auth.api`：认证服务 API 协议定义。
+- `internal/handler`、`internal/logic`：`go-zero` 生成的路由处理与业务逻辑入口。
+- `internal/model`：认证域数据模型。
+- `pkg/provider`、`pkg/session`：Provider 适配和 token/session 规则。
 
 ## 核心能力
 
@@ -19,6 +26,7 @@
 
 - `GET /api/v1/health`
 - `GET /api/v1/auth/providers/:provider/login-url`
+- `POST /api/v1/auth/providers/password/register`
 - `POST /api/v1/auth/providers/:provider/callback`
 - `POST /api/v1/auth/providers/phone/send-captcha`
 - `POST /api/v1/auth/providers/guest/device-id`
