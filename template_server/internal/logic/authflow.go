@@ -341,7 +341,19 @@ func (s *authFlow) loginWithWeChat(req *ProviderCallbackRequest) (*SessionRespon
 
 	ok, err := s.svcCtx.KVStore.Consume(s.ctx, s.stateKey(tenant.TenantKey, "wechat", providerConfig.ClientType, state))
 	if err != nil {
-		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+		s.Errorf(
+			"wechat login consume state failed: tenant=%s client_type=%s state=%s err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(state, 6),
+			err,
+		)
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("consume wechat login state failed: %w", err),
+		)
 	}
 	if !ok {
 		return nil, appErrors.ErrWeChatStateInvalid
@@ -355,11 +367,36 @@ func (s *authFlow) loginWithWeChat(req *ProviderCallbackRequest) (*SessionRespon
 	})
 	oauthToken, err := client.ExchangeCode(s.ctx, code)
 	if err != nil {
-		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+		s.Errorf(
+			"wechat login exchange code failed: tenant=%s client_type=%s code=%s state=%s err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(code, 6),
+			maskTail(state, 6),
+			err,
+		)
+		return nil, appErrors.New(
+			appErrors.ErrAuthFailed.Code,
+			appErrors.ErrAuthFailed.HTTPStatus,
+			appErrors.ErrAuthFailed.Message,
+			fmt.Errorf("exchange wechat code failed: %w", err),
+		)
 	}
 	oauthToken, err = client.EnsureAccessTokenValid(s.ctx, oauthToken)
 	if err != nil {
-		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+		s.Errorf(
+			"wechat login verify access token failed: tenant=%s client_type=%s openid=%s err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(oauthToken.OpenID, 6),
+			err,
+		)
+		return nil, appErrors.New(
+			appErrors.ErrAuthFailed.Code,
+			appErrors.ErrAuthFailed.HTTPStatus,
+			appErrors.ErrAuthFailed.Message,
+			fmt.Errorf("verify wechat access token failed: %w", err),
+		)
 	}
 
 	userInfo, err := client.FetchUserInfo(s.ctx, oauthToken.AccessToken, oauthToken.OpenID)
@@ -380,6 +417,13 @@ func (s *authFlow) loginWithWeChat(req *ProviderCallbackRequest) (*SessionRespon
 
 	user, err := s.upsertIdentityUser(tenant, providerConfig, "wechat", oauthToken.OpenID, oauthToken.UnionID, displayName, avatarURL, "user", marshalJSON(userInfo))
 	if err != nil {
+		s.Errorf(
+			"wechat login upsert identity user failed: tenant=%s client_type=%s openid=%s err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(oauthToken.OpenID, 6),
+			err,
+		)
 		return nil, err
 	}
 	businessUser, err := s.syncBusinessUser(tenant.TenantKey, "wechat", providerConfig.ClientType, businessBridgeRequest{
@@ -391,6 +435,14 @@ func (s *authFlow) loginWithWeChat(req *ProviderCallbackRequest) (*SessionRespon
 		CurrentUserRole: req.CurrentUserRole,
 	})
 	if err != nil {
+		s.Errorf(
+			"wechat login sync business user failed: tenant=%s client_type=%s openid=%s auth_user_id=%d err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(oauthToken.OpenID, 6),
+			user.ID,
+			err,
+		)
 		return nil, err
 	}
 	return s.issueSession(tenant, user.ID, "wechat", providerConfig.ClientType, businessUser)
@@ -598,7 +650,12 @@ func (s *authFlow) upsertIdentityUser(
 ) (*model.AuthUser, error) {
 	user, identity, err := s.svcCtx.AuthRepo.FindUserByIdentity(s.ctx, tenant.ID, provider, subject)
 	if err != nil {
-		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("find auth user by identity failed: %w", err),
+		)
 	}
 
 	now := time.Now()
@@ -620,7 +677,12 @@ func (s *authFlow) upsertIdentityUser(
 			ProfileJSON:     profileJSON,
 		}
 		if err := s.svcCtx.AuthRepo.CreateUserWithIdentity(s.ctx, user, identity); err != nil {
-			return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+			return nil, appErrors.New(
+				appErrors.ErrInternalServer.Code,
+				appErrors.ErrInternalServer.HTTPStatus,
+				appErrors.ErrInternalServer.Message,
+				fmt.Errorf("create auth user with identity failed: %w", err),
+			)
 		}
 		return user, nil
 	}
@@ -634,11 +696,21 @@ func (s *authFlow) upsertIdentityUser(
 		updatedAvatarURL = strings.TrimSpace(avatarURL)
 	}
 	if err := s.svcCtx.AuthRepo.UpdateUserLogin(s.ctx, user.ID, updatedDisplayName, updatedAvatarURL, now); err != nil {
-		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("update auth user login failed: %w", err),
+		)
 	}
 	if identity != nil {
 		if err := s.svcCtx.AuthRepo.UpdateIdentity(s.ctx, identity.ID, providerConfig.ClientType, strings.TrimSpace(unionID), profileJSON); err != nil {
-			return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+			return nil, appErrors.New(
+				appErrors.ErrInternalServer.Code,
+				appErrors.ErrInternalServer.HTTPStatus,
+				appErrors.ErrInternalServer.Message,
+				fmt.Errorf("update auth identity failed: %w", err),
+			)
 		}
 	}
 	user.DisplayName = updatedDisplayName
@@ -688,7 +760,12 @@ func (s *authFlow) issueSession(tenant *model.AuthTenant, authUserID uint, provi
 		}),
 	}
 	if err := s.svcCtx.AuthRepo.CreateSession(s.ctx, authSession); err != nil {
-		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("create auth session failed: %w", err),
+		)
 	}
 
 	return &SessionResponse{
@@ -737,25 +814,45 @@ func (s *authFlow) syncBusinessUser(tenantKey string, provider string, clientTyp
 	req.ClientType = normalize(clientType)
 	payload, err := json.Marshal(req)
 	if err != nil {
-		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("marshal business bridge request failed: %w", err),
+		)
 	}
 
 	httpReq, err := http.NewRequestWithContext(s.ctx, http.MethodPost, runtimeCfg.BridgeBaseURL+"/api/v1/internal/auth/sync", bytes.NewReader(payload))
 	if err != nil {
-		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("build business bridge request failed: %w", err),
+		)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Auth-Service-Key", runtimeCfg.BridgeAuthKey)
 
 	httpResp, err := (&http.Client{Timeout: 8 * time.Second}).Do(httpReq)
 	if err != nil {
-		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+		return nil, appErrors.New(
+			appErrors.ErrAuthFailed.Code,
+			appErrors.ErrAuthFailed.HTTPStatus,
+			appErrors.ErrAuthFailed.Message,
+			fmt.Errorf("request business bridge failed: %w", err),
+		)
 	}
 	defer httpResp.Body.Close()
 
 	var envelope bridgeEnvelope
 	if err := json.NewDecoder(httpResp.Body).Decode(&envelope); err != nil {
-		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
+		return nil, appErrors.New(
+			appErrors.ErrAuthFailed.Code,
+			appErrors.ErrAuthFailed.HTTPStatus,
+			appErrors.ErrAuthFailed.Message,
+			fmt.Errorf("decode business bridge response failed: %w", err),
+		)
 	}
 	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusMultipleChoices || envelope.Code != 200 {
 		msg := strings.TrimSpace(envelope.Msg)
@@ -890,6 +987,17 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func maskTail(value string, keep int) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	if keep <= 0 || len(trimmed) <= keep {
+		return trimmed
+	}
+	return "..." + trimmed[len(trimmed)-keep:]
 }
 
 func (s *authFlow) SendPhoneCaptcha(req *PhoneCaptchaSendRequest) (*PhoneCaptchaSendResponse, error) {
