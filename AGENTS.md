@@ -11,6 +11,7 @@
 - 对于明确的代码修改、文档修改、重构、实现新功能、纯说明类问题，不要求默认先检查上述问题归档目录。
 - 对 App、Web 与其他前端工程，dev/prod 运行时统一直连对应已部署 server 的 API 域名；不要把本地启动 `template_server`、本地 `go run`、本地容器或本地 API proxy 当成前端联调默认方案。
 - 前端如需切换环境，应切换到对应测试或正式环境的已部署 API 域名，并同步补齐 CORS、网关与鉴权配置；不要把 `localhost`、`127.0.0.1`、容器内网地址或宿主机端口写成前端默认 API 地址。
+- 对 Web 工程，只要 `vite.config.ts` 要求 `VITE_WEB_NAME`，统一将其视为同级 `deploy_config.sh` 中的 `PROJECT_NAME`；执行 `lint`、`build`、`preview` 等命令前先补齐该变量，不要再把缺少 `VITE_WEB_NAME` 当成额外问题单独汇报。
 - 在 `darren_space` 工作区内，如用户要求“全部提交并推送”“批量 pull/push 整个工作区”这类针对全工作区的 Git 操作，优先直接使用工作区根目录 `darren_space_git.sh`，不要逐仓库手动执行；除非用户明确要求只处理单个仓库，或该脚本不适用。
 - 在 `darren_space` 工作区内，如需修改子工程中的 `deploy_shell` submodule，标准流程是先在工作区根目录的 `deploy_shell` 源工程完成修改并 push，再进入对应子工程中的 `deploy_shell` 执行 pull 同步最新提交，并在该子工程提交更新后的 submodule 指针；不要长期直接在子工程内嵌的 `deploy_shell` 目录脱离源工程单独维护。
 

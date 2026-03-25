@@ -1,3 +1,3 @@
-校正认证服务 README 文档
+同步 AGENTS 的 Web 构建变量规则
 
-补充当前目录结构与密码注册接口说明，避免入口文档遗漏真实能力。
+补充 Web 工程中 VITE_WEB_NAME 与同级 deploy_config.sh 中 PROJECT_NAME 的对应约定，避免本地 lint、build、preview 因缺少环境变量反复阻塞。
