@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -38,16 +37,16 @@ type (
 	}
 
 	AuthIdentities struct {
-		Id              uint64    `db:"id"`
-		TenantId        uint64    `db:"tenant_id"`
-		AuthUserId      uint64    `db:"auth_user_id"`
-		Provider        string    `db:"provider"`
-		ClientType      string    `db:"client_type"`
-		ProviderSubject string    `db:"provider_subject"`
-		UnionId         string    `db:"union_id"`
-		ProfileJson     string    `db:"profile_json"`
-		CreatedAt       time.Time `db:"created_at"`
-		UpdatedAt       time.Time `db:"updated_at"`
+		Id              uint64       `db:"id"`
+		TenantId        uint64       `db:"tenant_id"`
+		AuthUserId      uint64       `db:"auth_user_id"`
+		Provider        string       `db:"provider"`
+		ClientType      string       `db:"client_type"`
+		ProviderSubject string       `db:"provider_subject"`
+		UnionId         string       `db:"union_id"`
+		ProfileJson     string       `db:"profile_json"`
+		CreatedAt       sql.NullTime `db:"created_at"`
+		UpdatedAt       sql.NullTime `db:"updated_at"`
 	}
 )
 

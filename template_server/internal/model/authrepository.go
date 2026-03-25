@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/darren-you/auth_service/template_server/internal/config"
+	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
@@ -35,6 +36,18 @@ type authRepository struct {
 	sessions        AuthSessionsModel
 }
 
+type authTimestampColumnState struct {
+	TableName     string         `db:"table_name"`
+	ColumnName    string         `db:"column_name"`
+	IsNullable    string         `db:"is_nullable"`
+	ColumnDefault sql.NullString `db:"column_default"`
+	Extra         string         `db:"extra"`
+}
+
+type authNullTimestampCount struct {
+	Count int64 `db:"count"`
+}
+
 func NewAuthRepository(conn sqlx.SqlConn) AuthRepository {
 	return &authRepository{
 		conn:            conn,
@@ -47,6 +60,10 @@ func NewAuthRepository(conn sqlx.SqlConn) AuthRepository {
 }
 
 func (r *authRepository) SyncCatalog(ctx context.Context, tenantConfigs []config.TenantConfig) error {
+	if err := r.ensureCoreTimestampSchema(ctx); err != nil {
+		return err
+	}
+
 	for _, tenantCfg := range tenantConfigs {
 		tenant, err := r.FindTenantByKey(ctx, tenantCfg.Key)
 		if err != nil {
@@ -132,6 +149,134 @@ func (r *authRepository) SyncCatalog(ctx context.Context, tenantConfigs []config
 	}
 
 	return nil
+}
+
+func (r *authRepository) ensureCoreTimestampSchema(ctx context.Context) error {
+	columnStates, err := r.loadAuthTimestampColumnStates(ctx)
+	if err != nil {
+		return err
+	}
+
+	usersNeedRepair := authTimestampSchemaNeedsRepair(columnStates, "auth_users")
+	identitiesNeedRepair := authTimestampSchemaNeedsRepair(columnStates, "auth_identities")
+
+	var usersNullCount authNullTimestampCount
+	if err := r.conn.QueryRowCtx(ctx, &usersNullCount, "select count(*) as count from auth_users where created_at is null or updated_at is null"); err != nil {
+		return err
+	}
+
+	var identitiesNullCount authNullTimestampCount
+	if err := r.conn.QueryRowCtx(ctx, &identitiesNullCount, "select count(*) as count from auth_identities where created_at is null or updated_at is null"); err != nil {
+		return err
+	}
+
+	if !usersNeedRepair && !identitiesNeedRepair && usersNullCount.Count == 0 && identitiesNullCount.Count == 0 {
+		return nil
+	}
+
+	logx.WithContext(ctx).Infof(
+		"repair auth timestamp schema: auth_users_need=%t auth_users_null_rows=%d auth_identities_need=%t auth_identities_null_rows=%d",
+		usersNeedRepair,
+		usersNullCount.Count,
+		identitiesNeedRepair,
+		identitiesNullCount.Count,
+	)
+
+	if usersNullCount.Count > 0 {
+		if _, err := r.conn.ExecCtx(ctx, `
+			update auth_users
+			set
+				created_at = coalesce(created_at, updated_at, last_login_at, now()),
+				updated_at = coalesce(updated_at, created_at, last_login_at, now())
+			where created_at is null or updated_at is null
+		`); err != nil {
+			return err
+		}
+	}
+	if usersNeedRepair {
+		if _, err := r.conn.ExecCtx(ctx, `
+			alter table auth_users
+			modify column created_at timestamp not null default current_timestamp,
+			modify column updated_at timestamp not null default current_timestamp on update current_timestamp
+		`); err != nil {
+			return err
+		}
+	}
+
+	if identitiesNullCount.Count > 0 {
+		if _, err := r.conn.ExecCtx(ctx, `
+			update auth_identities
+			set
+				created_at = coalesce(created_at, updated_at, now()),
+				updated_at = coalesce(updated_at, created_at, now())
+			where created_at is null or updated_at is null
+		`); err != nil {
+			return err
+		}
+	}
+	if identitiesNeedRepair {
+		if _, err := r.conn.ExecCtx(ctx, `
+			alter table auth_identities
+			modify column created_at timestamp not null default current_timestamp,
+			modify column updated_at timestamp not null default current_timestamp on update current_timestamp
+		`); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *authRepository) loadAuthTimestampColumnStates(ctx context.Context) ([]authTimestampColumnState, error) {
+	var rows []authTimestampColumnState
+	if err := r.conn.QueryRowsCtx(ctx, &rows, `
+		select
+			table_name,
+			column_name,
+			is_nullable,
+			column_default,
+			extra
+		from information_schema.columns
+		where table_schema = database()
+			and table_name in ('auth_users', 'auth_identities')
+			and column_name in ('created_at', 'updated_at')
+	`); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func authTimestampSchemaNeedsRepair(columns []authTimestampColumnState, tableName string) bool {
+	requiredColumns := map[string]bool{
+		"created_at": false,
+		"updated_at": false,
+	}
+
+	for _, column := range columns {
+		if column.TableName != tableName {
+			continue
+		}
+
+		requiredColumns[column.ColumnName] = true
+		if strings.EqualFold(strings.TrimSpace(column.IsNullable), "YES") {
+			return true
+		}
+		if !hasCurrentTimestampDefault(column.ColumnDefault) {
+			return true
+		}
+		if column.ColumnName == "updated_at" && !strings.Contains(strings.ToLower(column.Extra), "on update current_timestamp") {
+			return true
+		}
+	}
+
+	return !requiredColumns["created_at"] || !requiredColumns["updated_at"]
+}
+
+func hasCurrentTimestampDefault(value sql.NullString) bool {
+	if !value.Valid {
+		return false
+	}
+	return strings.Contains(strings.ToLower(strings.TrimSpace(value.String)), "current_timestamp")
 }
 
 func (r *authRepository) FindTenantByKey(ctx context.Context, tenantKey string) (*AuthTenant, error) {
@@ -382,8 +527,8 @@ func fromUserRecord(record *AuthUsers) *AuthUser {
 		Role:        record.Role,
 		Status:      record.Status,
 		LastLoginAt: lastLoginAt,
-		CreatedAt:   record.CreatedAt,
-		UpdatedAt:   record.UpdatedAt,
+		CreatedAt:   nullTimeOrZero(record.CreatedAt),
+		UpdatedAt:   nullTimeOrZero(record.UpdatedAt),
 	}
 }
 
@@ -422,8 +567,8 @@ func fromIdentityRecord(record *AuthIdentities) *AuthIdentity {
 		ProviderSubject: record.ProviderSubject,
 		UnionID:         record.UnionId,
 		ProfileJSON:     record.ProfileJson,
-		CreatedAt:       record.CreatedAt,
-		UpdatedAt:       record.UpdatedAt,
+		CreatedAt:       nullTimeOrZero(record.CreatedAt),
+		UpdatedAt:       nullTimeOrZero(record.UpdatedAt),
 	}
 }
 

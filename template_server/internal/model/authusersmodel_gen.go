@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -44,8 +43,8 @@ type (
 		Role        string       `db:"role"`
 		Status      string       `db:"status"`
 		LastLoginAt sql.NullTime `db:"last_login_at"`
-		CreatedAt   time.Time    `db:"created_at"`
-		UpdatedAt   time.Time    `db:"updated_at"`
+		CreatedAt   sql.NullTime `db:"created_at"`
+		UpdatedAt   sql.NullTime `db:"updated_at"`
 	}
 )
 
