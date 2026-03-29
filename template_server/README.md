@@ -2,7 +2,7 @@
 
 ## 遵循标准
 
-- 工作区 Server 标准：[`../../docs/workspace/standards/server/server_golden_path.md`](../../docs/workspace/standards/server/server_golden_path.md)
+- 工作区 Server 标准：[`../../harness/docs/workspace/standards/server/server_golden_path.md`](../../harness/docs/workspace/standards/server/server_golden_path.md)
 
 ## 文档入口
 

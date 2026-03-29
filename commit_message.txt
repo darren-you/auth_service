@@ -1,3 +1,3 @@
-同步 AGENTS 技能化与工具化入口
+修正认证服务标准文档回链
 
-按工作区最新 Skill / MCP / AGENTS 分层规则重新生成 AGENTS.md。
+同步修复 template_server README 中的工作区 standards 入口链接。
