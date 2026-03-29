@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const (
+	requestIDHeader = "X-Request-ID"
+	traceIDKey      = "trace_id"
+)
+
 type Config struct {
 	BaseURL string
 	Timeout time.Duration
@@ -230,6 +235,7 @@ func (c *Client) doJSON(ctx context.Context, method string, endpoint string, req
 		return fmt.Errorf("build request failed: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	propagateRequestID(req, ctx)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -270,4 +276,32 @@ func (c *Client) doJSON(ctx context.Context, method string, endpoint string, req
 		return fmt.Errorf("decode auth_service payload failed: %w", err)
 	}
 	return nil
+}
+
+func propagateRequestID(req *http.Request, ctx context.Context) {
+	if req == nil || ctx == nil {
+		return
+	}
+
+	requestID := requestIDFromContext(ctx)
+	if requestID == "" {
+		return
+	}
+
+	req.Header.Set(requestIDHeader, requestID)
+}
+
+func requestIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+
+	if requestID, ok := ctx.Value(traceIDKey).(string); ok {
+		return strings.TrimSpace(requestID)
+	}
+	if requestID, ok := ctx.Value(requestIDHeader).(string); ok {
+		return strings.TrimSpace(requestID)
+	}
+
+	return ""
 }

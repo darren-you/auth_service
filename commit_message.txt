@@ -1,3 +1,3 @@
-统一认证服务观测语义
+透传认证客户端请求链路标识
 
-补齐 request id、trace_id、请求日志与下游 HTTP 透传，并回收对应 deviation 记录。
+为 auth_service Go client 补齐 X-Request-ID 透传，供各业务服务统一收口下游观测语义。
