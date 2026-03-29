@@ -9,19 +9,29 @@
 - 当根 `README.md`、子工程 `README.md`、`deploy_config.sh`、实际目录结构之间出现不一致时，以当前仓库实际文件和配置为准，不要死记旧规则。
 - 仅在故障排查、bug 修复、线上问题定位或明确需要复盘历史问题时，优先检索当前仓库的 `docs/issues` 或所属工作区根目录 `docs` 中是否已有类似记录及解决方案。
 - 对于明确的代码修改、文档修改、重构、实现新功能、纯说明类问题，不要求默认先检查上述问题归档目录。
-- 对 App、Web 与其他前端工程，dev/prod 运行时统一直连对应已部署 server 的 API 域名；不要把本地启动 `template_server`、本地 `go run`、本地容器或本地 API proxy 当成前端联调默认方案。
-- 前端如需切换环境，应切换到对应测试或正式环境的已部署 API 域名，并同步补齐 CORS、网关与鉴权配置；不要把 `localhost`、`127.0.0.1`、容器内网地址或宿主机端口写成前端默认 API 地址。
-- 对 Web 工程，只要 `vite.config.ts` 要求 `VITE_WEB_NAME`，统一将其视为同级 `deploy_config.sh` 中的 `PROJECT_NAME`；执行 `lint`、`build`、`preview` 等命令前先补齐该变量，不要再把缺少 `VITE_WEB_NAME` 当成额外问题单独汇报。
 - 在 `darren_space` 工作区内，如用户要求“全部提交并推送”“批量 pull/push 整个工作区”这类针对全工作区的 Git 操作，优先直接使用工作区根目录 `darren_space_git.sh`，不要逐仓库手动执行；除非用户明确要求只处理单个仓库，或该脚本不适用。
 - 在 `darren_space` 工作区内，如需修改子工程中的 `deploy_shell` submodule，标准流程是先在工作区根目录的 `deploy_shell` 源工程完成修改并 push，再进入对应子工程中的 `deploy_shell` 执行 pull 同步最新提交，并在该子工程提交更新后的 submodule 指针；不要长期直接在子工程内嵌的 `deploy_shell` 目录脱离源工程单独维护。
 
+## Engineering Standards
+
+- 工作区工程标准正文层位于根目录 `docs/workspace/standards/README.md`。
+- 开始处理某个技术域前，除根 `README.md` 与子工程 `README.md` 外，还必须优先读取对应标准入口：
+  - `template_server` -> `docs/workspace/standards/server/server_golden_path.md`
+  - `template_web` -> `docs/workspace/standards/web/web_golden_path.md`
+  - `template_swift_app` -> `docs/workspace/standards/ios_app/ios_app_golden_path.md`
+  - `template_android_app` -> `docs/workspace/standards/android_app/android_app_golden_path.md`
+  - `template_swift_mac` -> `docs/workspace/standards/macos_app/macos_app_golden_path.md`
+  - `template_wechat_miniprogram` -> `docs/workspace/standards/wechat_miniprogram/wechat_miniprogram_golden_path.md`
+  - `template_nginx` -> `docs/workspace/standards/nginx/nginx_golden_path.md`
+- 如果当前任务明确属于某个技术域，但仓库内没有标准目录名，也应优先参考最接近的工作区 standards 文档，而不是只沿用历史实现。
+- `template_project` 是各技术域的参考实现仓库，不代替工作区标准正文；标准冲突时，优先以工作区 `docs/workspace/standards/` 与当前仓库真实结构为准。
+
 ## Documentation Layout
 
-- 对于标准业务/模板仓库（通常包含 `template_swift_app`、`template_server`、`template_web`、`docs` 中的多个目录），工程文档统一放在项目根目录的 `docs` 目录中。
-- 如果当前仓库位于 `darren_space` 工作区内，工作区级归档文档统一放在工作区根目录 `docs/projects/<repo>/`；同一仓库如需区分 `app`、`server`、`web`，再在仓库目录下细分；仓库自身 `docs` 目录不再保留 `issues` 子目录。
-- `docs` 根层级只保留 `README.md`、总览、索引等入口文档；细致的专题说明、功能文档、排障记录、配置指南必须进入对应子目录，不要直接堆在 `docs` 顶层。
-- 在未采用工作区集中归档规则的情况下，`docs` 目录优先保持为：`docs/api`、`docs/features/app`、`docs/features/server`、`docs/features/web`、`docs/issues/app`、`docs/issues/server`、`docs/issues/web`。
-- 在未采用工作区集中归档规则的情况下，API 文档放在 `docs/api`；feature 文档放在 `docs/features/*`；issues 文档放在 `docs/issues/*`。
+- 对于单用途仓库、工具仓库、配置仓库或轻量前端仓库，以根 `README.md` 作为主入口，按需补充 `docs` 或子目录文档即可。
+- 不强制要求补齐完整的 `docs/api`、`docs/features/*`、`docs/issues/*` 目录树。
+- 细致的专题说明、操作手册、排障步骤、配置指南不要直接放在仓库根目录或 `docs` 根层级；顶层只保留 `README.md`、总览、索引类入口文档，具体内容应放入合适的主题子目录或对应模块目录。
+- 如果当前仓库位于 `darren_space` 工作区内，且该项目已采用工作区集中归档规则，相关归档文档优先查看工作区根目录 `docs/projects/<repo>/` 中对应记录；如该仓库在归档内继续按 `app`、`server`、`web` 细分，再进入对应子目录。
 
 ## Documentation Naming
 
@@ -38,14 +48,6 @@
 - `commit_message.txt` 的内容必须可直接用于提交：使用中文；第一行写 commit 标题；如有补充说明，第二行留空后继续写正文。
 - 当用户要求提交某个子工程时，优先直接使用该子工程根目录 `commit_message.txt` 中已记录的内容作为 commit 信息；除非用户明确指定新的提交文案，否则不要临时改写成其他内容。
 - 如果一次任务同时修改多个子工程，需要分别覆盖各自的 `commit_message.txt`。
-
-## Web Static Assets
-
-- 对新建或准备统一整理的 Web 工程，站点级静态资源优先放在 `<web_dir>/public/assets`。
-- favicon、logo、icon 等图标资源优先放在 `<web_dir>/public/assets/icons`。
-- 需要通过绝对路径直接访问的普通图片素材优先放在 `<web_dir>/public/assets/images`。
-- 仅在资源需要被前端代码 `import` 并参与打包时，才放在 `<web_dir>/src/assets`；不要把 favicon 或共享 icon 放在 `src/assets`。
-- 如果某个现有项目已经稳定使用其他目录约定，例如 `public/icons`，则优先保持该项目既有结构，不要为了统一规则机械搬迁资源。
 
 ## Server YAML Config
 
@@ -66,10 +68,7 @@
 - 本工作区所说的 `CICD`，默认指正式线上版本的构建与部署；若用户只说“CICD”“发布”“部署”而未明确环境，按 production / prod / 线上环境处理。统一流程是先将本次涉及的代码全部提交并推送，再通过 HTTP 方式触发 Jenkins 中对应的生产构建任务。
 - 当用户明确要求“部署、上线、修复线上配置并验证”时，Agent 可以直接在本地调用 `deploy_shell` 中的脚本；如果走 Jenkins 流程，也应先完成提交推送，再通过 HTTP 触发。
 - 优先执行完整流水线；只有在明确知道只是线上 YAML 配置核对、容器现场问题或 nginx 转发问题时，才直接 SSH 登录服务器处理。
-- 对 Web 工程执行线上 `CICD`、发布正式版本或构建 production 产物前，必须先关闭辅助定位色块、布局标记、调试角标等仅用于本地对齐的视觉辅助元素，并确认 production 构建结果中不再渲染这些元素；这类调试开关只能在本地 dev 调试下启用，不能依赖人工记忆，必要时应在代码或构建脚本中默认对 production 强制关闭。
-- 执行部署后，必须补做线上验证，至少覆盖首页、健康检查和本次变更涉及的关键接口或页面。
-- 对 `template_server` 做健康检查时，优先使用已上线域名对应的接口地址验证，例如 `https://<api-domain>/api/v1/health`；不要把公网 `IP:端口` 直接当成对外健康检查地址。
-- 如果域名暂时不可达或需要排查宿主机内部连通性，可在 SSH 登录服务器后使用 `127.0.0.1:<host-port>`、容器端口或容器内地址做补充验证，但这类方式只作为排障手段，不能替代域名健康检查结论。
+- 执行部署后，必须补做线上验证，至少覆盖本次变更涉及的关键功能或关键路径。
 - `deploy_shell` 是部署标准的唯一来源，不要为历史子工程目录、旧配置路径或非标准结构继续在 `deploy_shell` 内追加兼容逻辑；发现业务仓库不符合规范时，应优先修改业务仓库本身对齐当前标准。
 - 移动端工程目录统一使用 `template_swift_app` 与 `template_android_app`；不要继续沿用 `template_app` 之类的历史命名。
 - `AGENTS.md` 中禁止写入某个具体项目专属的域名、服务器 IP、账号密码、固定容器名、固定部署目录等硬编码信息。
@@ -80,16 +79,17 @@
 - 调用 Jenkins HTTP 触发 CICD 时，默认走共享域名 `https://jenkins.xdarren.com`；不要再把当前机器本机 `127.0.0.1:8080` 或本地 `~/.jenkins` 当成前提。
 - 通过 HTTP 触发 Jenkins 后，默认不需要等待构建任务执行完成；只有在排查问题、分析构建结果、查看构建日志或同步 Jenkins 配置时，才通过共享 Jenkins SSH profile 访问远端 Jenkins Home，而不是读取当前机器本地 Jenkins 目录。
 
+## Server Deployment And Verification
+
+- Server 部署完成后，至少验证健康检查和本次变更涉及的关键接口。
+- 对 `template_server` 做健康检查时，优先使用已上线域名对应的接口地址验证，例如 `https://<api-domain>/api/v1/health`；不要把公网 `IP:端口` 直接当成对外健康检查地址。
+- 如果域名暂时不可达或需要排查宿主机内部连通性，可在 SSH 登录服务器后使用 `127.0.0.1:<host-port>`、容器端口或容器内地址做补充验证，但这类方式只作为排障手段，不能替代域名健康检查结论。
+
 通用调用方式：
 
 ```bash
 PROJECT_ROOT=/absolute/path/to/project
 
-# Web
-bash "$PROJECT_ROOT/deploy_shell/deploy_web/remote_deploy_pipeline.sh" \
-  --config "$PROJECT_ROOT/<web_dir>/deploy_config.sh"
-
-# Server
 BuildBranch=origin/master BuildEnv=prod \
 bash "$PROJECT_ROOT/deploy_shell/deploy_server/remote_deploy_pipeline.sh" \
   --config "$PROJECT_ROOT/<server_dir>/deploy_config.sh"
@@ -98,9 +98,6 @@ bash "$PROJECT_ROOT/deploy_shell/deploy_server/remote_deploy_pipeline.sh" \
 可选分步调用：
 
 ```bash
-bash "$PROJECT_ROOT/deploy_shell/deploy_web/npm_build_package.sh" \
-  --config "$PROJECT_ROOT/<web_dir>/deploy_config.sh"
-
 BuildBranch=origin/master BuildEnv=prod \
 bash "$PROJECT_ROOT/deploy_shell/deploy_server/docker_build_push.sh" \
   --config "$PROJECT_ROOT/<server_dir>/deploy_config.sh"
@@ -109,7 +106,6 @@ bash "$PROJECT_ROOT/deploy_shell/deploy_server/docker_build_push.sh" \
 通用验证方式：
 
 ```bash
-curl -I https://<web-domain>/
 curl -i https://<api-domain>/api/v1/health
 ```
 

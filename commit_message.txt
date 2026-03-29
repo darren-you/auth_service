@@ -1,3 +1,3 @@
-同步 AGENTS 的 Web 构建变量规则
+同步 AGENTS 工程标准入口
 
-补充 Web 工程中 VITE_WEB_NAME 与同级 deploy_config.sh 中 PROJECT_NAME 的对应约定，避免本地 lint、build、preview 因缺少环境变量反复阻塞。
+同步新的 Engineering Standards 规则片段到 auth_service/AGENTS.md。
