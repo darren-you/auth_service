@@ -11,19 +11,26 @@ import (
 
 func Handler(ctx context.Context, err error) (int, any) {
 	if ok, customErr := IsCustomError(err); ok {
-		if customErr.Err != nil {
-			logx.WithContext(ctx).Errorf(
-				"request failed: code=%d status=%d message=%s detail=%v",
-				customErr.Code,
-				customErr.HTTPStatus,
-				customErr.Message,
-				customErr.Err,
-			)
-		}
-
 		message := strings.TrimSpace(customErr.Error())
 		if message == "" {
 			message = customErr.Message
+		}
+
+		if customErr.Err != nil {
+			logx.WithContext(ctx).Errorw(
+				"request failed",
+				logx.Field("error.code", customErr.Code),
+				logx.Field("http.status_code", customErr.HTTPStatus),
+				logx.Field("error.message", message),
+				logx.Field("error.detail", customErr.Err.Error()),
+			)
+		} else {
+			logx.WithContext(ctx).Errorw(
+				"request failed",
+				logx.Field("error.code", customErr.Code),
+				logx.Field("http.status_code", customErr.HTTPStatus),
+				logx.Field("error.message", message),
+			)
 		}
 		return customErr.HTTPStatus, responsex.New(customErr.Code, message, nil)
 	}
@@ -33,6 +40,12 @@ func Handler(ctx context.Context, err error) (int, any) {
 		message = ErrBadRequest.Message
 	}
 
-	logx.WithContext(ctx).Errorf("request failed: %v", err)
+	logx.WithContext(ctx).Errorw(
+		"request failed",
+		logx.Field("error.code", ErrBadRequest.Code),
+		logx.Field("http.status_code", http.StatusBadRequest),
+		logx.Field("error.message", message),
+		logx.Field("error.detail", err.Error()),
+	)
 	return http.StatusBadRequest, responsex.New(ErrBadRequest.Code, message, nil)
 }

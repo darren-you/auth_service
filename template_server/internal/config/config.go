@@ -218,7 +218,7 @@ func normalizeConfig(cfg *Config) {
 		cfg.Server.AllowMethods = []string{"GET", "POST", "OPTIONS"}
 	}
 	if len(cfg.Server.AllowHeaders) == 0 {
-		cfg.Server.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+		cfg.Server.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"}
 	}
 
 	cfg.MySQL.Host = fallbackString(cfg.MySQL.Host, "127.0.0.1")

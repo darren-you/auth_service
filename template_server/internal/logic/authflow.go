@@ -14,6 +14,7 @@ import (
 
 	appErrors "github.com/darren-you/auth_service/template_server/internal/errorx"
 	"github.com/darren-you/auth_service/template_server/internal/model"
+	"github.com/darren-you/auth_service/template_server/internal/observability"
 	"github.com/darren-you/auth_service/template_server/internal/svc"
 	"github.com/darren-you/auth_service/template_server/internal/types"
 	authguest "github.com/darren-you/auth_service/template_server/pkg/guest"
@@ -833,6 +834,7 @@ func (s *authFlow) syncBusinessUser(tenantKey string, provider string, clientTyp
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Auth-Service-Key", runtimeCfg.BridgeAuthKey)
+	observability.PropagateRequestID(httpReq, s.ctx)
 
 	httpResp, err := (&http.Client{Timeout: 8 * time.Second}).Do(httpReq)
 	if err != nil {

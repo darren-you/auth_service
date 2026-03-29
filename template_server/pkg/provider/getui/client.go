@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/darren-you/auth_service/template_server/internal/observability"
 )
 
 const defaultBaseURL = "https://h-gy.getui.net/v2/gy/ct_login/gy_get_pn"
@@ -80,6 +82,7 @@ func (c *Client) OneClickLogin(ctx context.Context, clientToken string, gyuid st
 		return "", fmt.Errorf("build getui request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	observability.PropagateRequestID(req, ctx)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

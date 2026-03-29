@@ -1,0 +1,14 @@
+schema_version: 1
+name: auth_service
+archetype: shared_domain_service
+lifecycle: active
+owner: darren-you
+domains:
+  - server
+depends_on:
+  - deploy_shell
+entrypoints:
+  - README.md
+  - template_server
+  - client
+  - provider

@@ -13,6 +13,7 @@ import (
 	"github.com/darren-you/auth_service/template_server/internal/config"
 	"github.com/darren-you/auth_service/template_server/internal/errorx"
 	"github.com/darren-you/auth_service/template_server/internal/handler"
+	"github.com/darren-you/auth_service/template_server/internal/middleware"
 	"github.com/darren-you/auth_service/template_server/internal/svc"
 	"github.com/darren-you/auth_service/template_server/pkg/responsex"
 
@@ -44,6 +45,8 @@ func main() {
 
 	httpx.SetErrorHandlerCtx(errorx.Handler)
 	httpx.SetOkHandler(responsex.OkHandler)
+	server.Use(middleware.NewRequestIDMiddleware().Handle)
+	server.Use(middleware.NewRequestLogMiddleware().Handle)
 
 	ctx, err := svc.NewServiceContext(c)
 	if err != nil {

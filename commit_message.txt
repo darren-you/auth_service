@@ -1,3 +1,3 @@
-同步 AGENTS 工程标准入口
+统一认证服务观测语义
 
-同步新的 Engineering Standards 规则片段到 auth_service/AGENTS.md。
+补齐 request id、trace_id、请求日志与下游 HTTP 透传，并回收对应 deviation 记录。

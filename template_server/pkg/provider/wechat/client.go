@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/darren-you/auth_service/template_server/internal/observability"
 )
 
 const (
@@ -238,6 +240,7 @@ func (c *Client) callAPI(ctx context.Context, endpoint string, values url.Values
 	if err != nil {
 		return nil, err
 	}
+	observability.PropagateRequestID(req, ctx)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
