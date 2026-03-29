@@ -12,7 +12,7 @@ DEPLOY_SERVER_PROFILE="host_124_221_158_155"
 # 共享部署默认值
 # =========================================
 # shellcheck disable=SC1091
-source "$PROJECT_ROOT/../deploy_shell/shared/load_deploy_profile.sh"
+source "$PROJECT_ROOT/../fast_deploy/shared/load_deploy_profile.sh"
 apply_deploy_profile_defaults "$DEPLOY_SERVER_PROFILE" "server"
 
 # =========================================

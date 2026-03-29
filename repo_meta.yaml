@@ -1,14 +1,26 @@
-schema_version: 1
+schema_version: 2
 name: auth_service
 archetype: shared_domain_service
 lifecycle: active
 owner: darren-you
+governance_tier: strict
 domains:
   - server
+delivery_surfaces:
+  - server
 depends_on:
-  - deploy_shell
+  - fast_deploy
+default_workflows:
+  - release_server
+  - verify_server_health
+doc_status:
+  architecture: present
+  api: present
+  release: present
+  agent_context: present
 entrypoints:
   - README.md
   - template_server
   - client
   - provider
+  - docs/agent_context.md

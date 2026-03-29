@@ -1,4 +1,4 @@
-[submodule "deploy_shell"]
-	path = deploy_shell
-	url = git@github.com:darren-you/deploy_shell.git
+[submodule "fast_deploy"]
+	path = fast_deploy
+	url = git@github.com:darren-you/fast_deploy.git
 	branch = master

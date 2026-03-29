@@ -1,3 +1,3 @@
-同步 deploy_shell 子模块到工作区基准提交
+切换 fast_deploy 子模块
 
-将内嵌 deploy_shell 指针更新到工作区基准提交 81389936ac4b4dc4cf10b2f0402050645a2667e0。
+统一调整 fast_deploy 子模块路径、Git 地址与仓库内引用。

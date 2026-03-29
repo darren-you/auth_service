@@ -55,6 +55,6 @@
 PROJECT_ROOT=/absolute/path/to/auth_service
 
 BuildBranch=origin/master BuildEnv=prod \
-bash "$PROJECT_ROOT/deploy_shell/deploy_server/remote_deploy_pipeline.sh" \
+bash "$PROJECT_ROOT/fast_deploy/deploy_server/remote_deploy_pipeline.sh" \
   --config "$PROJECT_ROOT/template_server/deploy_config.sh"
 ```

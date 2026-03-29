@@ -10,7 +10,7 @@
 - 仅在故障排查、bug 修复、线上问题定位或明确需要复盘历史问题时，优先检索当前仓库的 `docs/issues` 或所属工作区根目录 `harness/docs` 中是否已有类似记录及解决方案。
 - 对于明确的代码修改、文档修改、重构、实现新功能、纯说明类问题，不要求默认先检查上述问题归档目录。
 - 在 `darren_space` 工作区内，如用户要求“全部提交并推送”“批量 pull/push 整个工作区”这类针对全工作区的 Git 操作，优先直接使用工作区根目录 `darren_space_git.sh`，不要逐仓库手动执行；除非用户明确要求只处理单个仓库，或该脚本不适用。
-- 在 `darren_space` 工作区内，如需修改子工程中的 `deploy_shell` submodule，标准流程是先在工作区根目录的 `deploy_shell` 源工程完成修改并 push，再进入对应子工程中的 `deploy_shell` 执行 pull 同步最新提交，并在该子工程提交更新后的 submodule 指针；不要长期直接在子工程内嵌的 `deploy_shell` 目录脱离源工程单独维护。
+- 在 `darren_space` 工作区内，如需修改子工程中的 `fast_deploy` submodule，标准流程是先在工作区根目录的 `fast_deploy` 源工程完成修改并 push，再进入对应子工程中的 `fast_deploy` 执行 pull 同步最新提交，并在该子工程提交更新后的 submodule 指针；不要长期直接在子工程内嵌的 `fast_deploy` 目录脱离源工程单独维护。
 
 ## Engineering Standards
 
@@ -48,9 +48,9 @@
 ## Deployment And Verification
 
 - 本工作区所说的 `CICD`，默认指 production / prod / 线上部署。
-- `deploy_shell` 是部署标准的唯一来源；所有部署、验证、SSH 目标都必须优先从真实 `deploy_config.sh` 和当前仓库结构动态读取。
+- `fast_deploy` 是部署标准的唯一来源；所有部署、验证、SSH 目标都必须优先从真实 `deploy_config.sh` 和当前仓库结构动态读取。
 - 执行部署后，必须补做线上验证，至少覆盖本次变更涉及的关键功能或关键路径。
-- `deploy_shell` 是部署标准的唯一来源，不要为历史子工程目录、旧配置路径或非标准结构继续在 `deploy_shell` 内追加兼容逻辑；发现业务仓库不符合规范时，应优先修改业务仓库本身对齐当前标准。
+- `fast_deploy` 是部署标准的唯一来源，不要为历史子工程目录、旧配置路径或非标准结构继续在 `fast_deploy` 内追加兼容逻辑；发现业务仓库不符合规范时，应优先修改业务仓库本身对齐当前标准。
 - `AGENTS.md` 中禁止写入某个具体项目专属的域名、服务器 IP、账号密码、固定容器名、固定部署目录等硬编码信息。
 - 部署流程、发布检查和 SSH 排障优先参考：
   - `harness/agents/skills/workspace-deploy-release-flow/SKILL.md`
