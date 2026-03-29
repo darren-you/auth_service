@@ -1,3 +1,3 @@
-透传认证客户端请求链路标识
+同步 AGENTS 技能化与工具化入口
 
-为 auth_service Go client 补齐 X-Request-ID 透传，供各业务服务统一收口下游观测语义。
+按工作区最新 Skill / MCP / AGENTS 分层规则重新生成 AGENTS.md。
