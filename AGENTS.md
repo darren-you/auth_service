@@ -57,7 +57,7 @@
   - `harness/agents/skills/workspace-web-release-check/SKILL.md`
   - `harness/agents/skills/workspace-server-release-check/SKILL.md`
   - `harness/agents/skills/workspace-server-ssh-diagnose/SKILL.md`
-- 如果 `agents_tools` MCP 已接入，优先使用：
+- 如果 `tools` MCP 已接入，优先使用：
   - `workspace.git.batch`
   - `deploy.web.pipeline`
   - `verify.web.http`
@@ -71,7 +71,7 @@
 - 对 `template_server` 做健康检查时，优先使用已上线域名对应的接口地址验证，不要把公网 `IP:端口` 直接当成对外健康检查地址。
 - 域名暂时不可达时，可用 `127.0.0.1:<host-port>`、容器端口或容器内地址做补充排障，但不能替代域名健康检查结论。
 - 详细流程优先参考 `harness/agents/skills/workspace-server-release-check/SKILL.md`。
-- 如已接入 `agents_tools` MCP，优先使用 `deploy.server.pipeline`、`verify.server.health` 与 `remote.server.inspect`。
+- 如已接入 `tools` MCP，优先使用 `deploy.server.pipeline`、`verify.server.health` 与 `remote.server.inspect`。
 
 ## Server SSH
 
@@ -79,7 +79,7 @@
 - SSH 目标必须优先从当前项目 `deploy_config.sh` 中读取，若项目存在多个部署目标，先识别当前环境后再连接。
 - 排查时不要预设远端部署目录、容器名、Docker 网络名或对外域名。
 - 详细排障流程优先参考 `harness/agents/skills/workspace-server-ssh-diagnose/SKILL.md`。
-- 如已接入 `agents_tools` MCP，优先使用 `remote.server.inspect`。
+- 如已接入 `tools` MCP，优先使用 `remote.server.inspect`。
 
 ## Sync Source
 
