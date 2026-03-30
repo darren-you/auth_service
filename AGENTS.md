@@ -49,6 +49,7 @@
 
 - 本工作区所说的 `CICD`，默认指 production / prod / 线上部署。
 - `fast_deploy` 是部署标准的唯一来源；所有部署、验证、SSH 目标都必须优先从真实 `deploy_config.sh` 和当前仓库结构动态读取。
+- 涉及 Jenkins job 新增、修改、同步前，必须先按真实 `deploy_config.sh` 校验 `PROJECT_NAME / PROJECT_NAME_ANDROID_APP` 是否满足对应 deploy kind 命名规则，并确保 job 名与该配置值一致。
 - 执行部署后，必须补做线上验证，至少覆盖本次变更涉及的关键功能或关键路径。
 - `fast_deploy` 是部署标准的唯一来源，不要为历史子工程目录、旧配置路径或非标准结构继续在 `fast_deploy` 内追加兼容逻辑；发现业务仓库不符合规范时，应优先修改业务仓库本身对齐当前标准。
 - `AGENTS.md` 中禁止写入某个具体项目专属的域名、服务器 IP、账号密码、固定容器名、固定部署目录等硬编码信息。
