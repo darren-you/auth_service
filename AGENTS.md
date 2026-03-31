@@ -1,5 +1,10 @@
 # AGENTS
 
+## Instruction Priority
+
+- 规则冲突时，优先级依次为：用户当前明确要求 > 更近作用域的 `AGENTS.md` / `overrides` / 目录级规则 > 当前仓库真实代码、真实目录结构与真实 `deploy_config.sh` > 工作区 `harness/docs/workspace/standards/` 正文 > `README.md` 与 `harness/docs/workspace/harness/` 专题文档 > 历史归档与参考材料。
+- 任何上层文档与真实代码、真实配置冲突时，先以真实现状为准，再决定是否需要回写文档或治理说明。
+
 ## General Rules
 
 - 使用中文回复。
@@ -10,19 +15,17 @@
 - 仅在故障排查、bug 修复、线上问题定位或明确需要复盘历史问题时，优先检索当前仓库的 `docs/issues` 或所属工作区根目录 `harness/docs` 中是否已有类似记录及解决方案。
 - 对于明确的代码修改、文档修改、重构、实现新功能、纯说明类问题，不要求默认先检查上述问题归档目录。
 - 在 `darren_space` 工作区内，如用户要求“全部提交并推送”“批量 pull/push 整个工作区”这类针对全工作区的 Git 操作，优先直接使用工作区根目录 `darren_space_git.sh`，不要逐仓库手动执行；除非用户明确要求只处理单个仓库，或该脚本不适用。
-- 在 `darren_space` 工作区内，如需修改子工程中的 `fast_deploy` submodule，标准流程是先在工作区根目录的 `fast_deploy` 源工程完成修改并 push，再进入对应子工程中的 `fast_deploy` 执行 pull 同步最新提交，并在该子工程提交更新后的 submodule 指针；不要长期直接在子工程内嵌的 `fast_deploy` 目录脱离源工程单独维护。
+- 在 `darren_space` 工作区内，如任务明确属于子工程 `fast_deploy` submodule 同步，优先走 `workspace-fast-deploy-submodule-sync` Skill，不要长期直接在子工程内嵌的 `fast_deploy` 目录脱离源工程单独维护。
 
 ## Engineering Standards
 
-- 工作区工程标准正文入口位于根目录 `harness/docs/workspace/standards/README.md`。
-- 开始处理某个技术域前，除根 `README.md` 与子工程 `README.md` 外，还必须优先读取对应标准入口；具体技术域映射统一以 `harness/docs/workspace/standards/README.md` 为准。
+- 当前任务明确属于某个技术域时，除根 `README.md` 与子工程 `README.md` 外，还必须优先读取 `harness/docs/workspace/standards/README.md` 与对应 standards 正文。
 - 如果当前任务明确属于某个技术域，但仓库内没有标准目录名，也应优先参考最接近的工作区 standards 文档，而不是只沿用历史实现。
 - 标准冲突时，优先以工作区 `harness/docs/workspace/standards/` 正文和当前仓库真实结构为准。
 
 ## Documentation Layout
 
-- 轻量仓库文档默认以根 `README.md` 作为主入口，详细布局规则以 `harness/docs/README.md` 和工作区统一归档约定为准。
-- 顶层只保留入口文档，细致说明放入合适的主题子目录。
+- 轻量仓库文档入口与归档边界统一以根 `README.md`、`harness/docs/README.md` 和工作区统一归档约定为准。
 
 ## Documentation Naming
 
@@ -42,16 +45,15 @@
 
 ## Server YAML Config
 
-- `template_server` 运行配置只认 YAML，不再依赖 env fallback；具体文件角色和目录约定以 `harness/docs/workspace/standards/server/server_golden_path.md` 为准。
-- 需要确认真实后端行为时，优先参考 `harness/agents/skills/workspace-server-validate-via-deploy/SKILL.md`，通过标准部署链路验证，而不是默认本地运行。
+- `template_server` 的 YAML 配置契约、文件角色和目录约定以 `harness/docs/workspace/standards/server/server_golden_path.md` 为准。
+- 需要确认真实后端行为时，优先走 `workspace-server-validate-via-deploy` Skill 对应的标准部署链路，而不是默认本地运行。
 
 ## Deployment And Verification
 
 - 本工作区所说的 `CICD`，默认指 production / prod / 线上部署。
 - `fast_deploy` 是部署标准的唯一来源；所有部署、验证、SSH 目标都必须优先从真实 `deploy_config.sh` 和当前仓库结构动态读取。
-- 涉及 Jenkins job 新增、修改、同步前，必须先按真实 `deploy_config.sh` 校验 `PROJECT_NAME / PROJECT_NAME_ANDROID_APP` 是否满足对应 deploy kind 命名规则，并确保 job 名与该配置值一致。
-- 执行部署后，必须补做线上验证，至少覆盖本次变更涉及的关键功能或关键路径。
 - `fast_deploy` 是部署标准的唯一来源，不要为历史子工程目录、旧配置路径或非标准结构继续在 `fast_deploy` 内追加兼容逻辑；发现业务仓库不符合规范时，应优先修改业务仓库本身对齐当前标准。
+- 执行部署后，必须补做线上验证；详细发布、验证与排障流程优先走对应 Skill 或 MCP。
 - `AGENTS.md` 中禁止写入某个具体项目专属的域名、服务器 IP、账号密码、固定容器名、固定部署目录等硬编码信息。
 - 部署流程、发布检查和 SSH 排障优先参考：
   - `harness/agents/skills/workspace-deploy-release-flow/SKILL.md`
@@ -66,23 +68,6 @@
   - `verify.server.health`
   - `remote.server.inspect`
 
-## Server Deployment And Verification
-
-- Server 部署完成后，至少验证健康检查和本次变更涉及的关键接口。
-- 对 `template_server` 做健康检查时，优先使用已上线域名对应的接口地址验证，不要把公网 `IP:端口` 直接当成对外健康检查地址。
-- 域名暂时不可达时，可用 `127.0.0.1:<host-port>`、容器端口或容器内地址做补充排障，但不能替代域名健康检查结论。
-- 详细流程优先参考 `harness/agents/skills/workspace-server-release-check/SKILL.md`。
-- 如已接入 `tools` MCP，优先使用 `deploy.server.pipeline`、`verify.server.health` 与 `remote.server.inspect`。
-
 ## Server SSH
 
-- 当需要排查线上容器、端口映射、线上实际 YAML 配置、nginx 转发或日志问题时，Agent 可以直接 SSH 登录宿主机处理。
-- SSH 目标必须优先从当前项目 `deploy_config.sh` 中读取，若项目存在多个部署目标，先识别当前环境后再连接。
-- 排查时不要预设远端部署目录、容器名、Docker 网络名或对外域名。
-- 详细排障流程优先参考 `harness/agents/skills/workspace-server-ssh-diagnose/SKILL.md`。
-- 如已接入 `tools` MCP，优先使用 `remote.server.inspect`。
-
-## Sync Source
-
-- 本文件由工作区根目录 `harness/scripts/sync_agents.sh` 根据 `harness/agents/manifest.sh` 渲染生成。
-- 需要调整通用规则时，优先修改工作区根目录 `harness/agents/fragments`、`harness/agents/manifest.sh` 或对应 `harness/agents/overrides/*.md`，不要长期直接手改各子仓库 `AGENTS.md`。
+- 当需要排查线上容器、端口映射、线上实际 YAML 配置、nginx 转发或日志问题时，先从当前项目 `deploy_config.sh` 识别目标环境，再优先使用 `workspace-server-ssh-diagnose` Skill 或 `remote.server.inspect`；不要预设远端部署目录、容器名、Docker 网络名或对外域名。
