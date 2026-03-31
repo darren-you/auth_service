@@ -23,4 +23,4 @@ entrypoints:
   - template_server
   - client
   - provider
-  - docs/agent_context.md
+  - harness/docs/workspace/repositories/auth_service/agent_context.md

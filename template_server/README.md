@@ -7,7 +7,7 @@
 ## 文档入口
 
 - API 契约入口：[`./auth.api`](./auth.api)
-- 历史偏离记录（已回收）：[`../docs/features/server/server_deviation_observability_semantics.md`](../docs/features/server/server_deviation_observability_semantics.md)
+- 历史偏离记录（已回收）：[`../../harness/docs/design/auth_service/server/server_deviation_observability_semantics.md`](../../harness/docs/design/auth_service/server/server_deviation_observability_semantics.md)
 
 ## 项目定位
 

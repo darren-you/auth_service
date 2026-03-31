@@ -1,3 +1,3 @@
-同步 fast_deploy 子模块到最新治理基线
+收口项目文档到 harness/docs 并移除遗留 docs 目录
 
-将仓库内嵌 fast_deploy 对齐到工作区根仓当前发布提交 bad15b46672b48b48fb7557c7d877a794e7e49b4，回收本轮治理执行中的部署底座漂移。
+统一迁移 README、repo_meta、AGENTS、standards 和治理脚本到 harness/docs 新目录结构，删除各子工程遗留 docs 目录并通过工作区治理检查。

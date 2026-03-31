@@ -12,7 +12,7 @@
 - 生成 commit 时使用中文。
 - 开始处理某个仓库前，优先阅读该仓库根目录 `README.md`；如果存在对应子工程 `README.md`，继续读取子工程说明后再动手。
 - 当根 `README.md`、子工程 `README.md`、`deploy_config.sh`、实际目录结构之间出现不一致时，以当前仓库实际文件和配置为准，不要死记旧规则。
-- 仅在故障排查、bug 修复、线上问题定位或明确需要复盘历史问题时，优先检索当前仓库的 `docs/issues` 或所属工作区根目录 `harness/docs` 中是否已有类似记录及解决方案。
+- 仅在故障排查、bug 修复、线上问题定位或明确需要复盘历史问题时，优先检索工作区根目录 `harness/docs/issues/` 中是否已有类似记录及解决方案。
 - 对于明确的代码修改、文档修改、重构、实现新功能、纯说明类问题，不要求默认先检查上述问题归档目录。
 - 在 `darren_space` 工作区内，如用户要求“全部提交并推送”“批量 pull/push 整个工作区”这类针对全工作区的 Git 操作，优先直接使用工作区根目录 `darren_space_git.sh`，不要逐仓库手动执行；除非用户明确要求只处理单个仓库，或该脚本不适用。
 - 在 `darren_space` 工作区内，如任务明确属于子工程 `fast_deploy` submodule 同步，优先走 `workspace-fast-deploy-submodule-sync` Skill，不要长期直接在子工程内嵌的 `fast_deploy` 目录脱离源工程单独维护。
