@@ -1,3 +1,3 @@
-切换 fast_deploy 子模块
+同步 fast_deploy 子模块到最新治理基线
 
-统一调整 fast_deploy 子模块路径、Git 地址与仓库内引用。
+将仓库内嵌 fast_deploy 对齐到工作区根仓当前发布提交 bad15b46672b48b48fb7557c7d877a794e7e49b4，回收本轮治理执行中的部署底座漂移。
