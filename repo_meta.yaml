@@ -1,4 +1,4 @@
-schema_version: 2
+schema_version: 3
 name: auth_service
 archetype: shared_domain_service
 lifecycle: active
@@ -18,6 +18,15 @@ doc_status:
   api: present
   release: present
   agent_context: present
+github:
+  repo: darren-you/auth_service
+  about: 统一认证域服务，提供会话、Provider 适配层与业务接入 SDK
+  topics:
+    - darren-space
+    - shared-domain-service
+    - server
+    - authentication
+    - provider-adapters
 entrypoints:
   - README.md
   - template_server
