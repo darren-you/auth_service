@@ -43,9 +43,15 @@
 微信小程序接入要点：
 
 - 前端通过 `wx.login` 获取 `code`
-- 业务后端把 `tenant_key + client_type=miniprogram + code` 转发到 `POST /api/v1/auth/providers/wechat/callback`
+- 业务后端把 `tenant_key + client_type=miniprogram + code` 转发到 `POST /api/v1/auth/providers/wechat_miniprogram/callback`
 - `auth_service` 使用租户级 `app_id / app_secret` 执行 `code2session`
 - 业务 bridge 需要接收 `provider=wechat`，并按 `open_id / union_id` 同步本地用户
+
+微信 provider 拆分约定：
+
+- `wechat_app` 对应 App 登录
+- `wechat_web` 对应 Web 扫码登录
+- `wechat_miniprogram` 对应微信小程序登录
 
 ## 接入原则
 

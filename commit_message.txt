@@ -1,4 +1,4 @@
-修复 auth_service 认证目录空时间戳兼容问题
+重构微信认证 provider 拆分
 
-补齐 auth_tenants 与 auth_provider_configs 的时间戳修复逻辑，
-避免历史空值数据导致 yike 小程序微信登录链路在线上扫描失败。
+- 拆分 wechat_app、wechat_web、wechat_miniprogram 三套 provider 与登录流程
+- 增加历史 provider 数据迁移、配置校验与文档更新

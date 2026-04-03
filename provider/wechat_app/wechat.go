@@ -1,11 +1,10 @@
-package wechat
+package wechatapp
 
-import internal "github.com/darren-you/auth_service/template_server/pkg/provider/wechat"
+import internal "github.com/darren-you/auth_service/template_server/pkg/provider/wechat_app"
 
 type Config = internal.Config
 type Client = internal.Client
 type OAuthToken = internal.OAuthToken
-type MiniProgramSession = internal.MiniProgramSession
 type UserInfo = internal.UserInfo
 type AuthCheckResponse = internal.AuthCheckResponse
 type APIError = internal.APIError

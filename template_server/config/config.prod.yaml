@@ -52,7 +52,7 @@ auth:
       bridge_base_url: https://stellar.xdarren.com
       bridge_auth_key: "{{ secret `auth.tenants.stellar.bridge_auth_key` }}"
       providers:
-        - provider: wechat
+        - provider: wechat_app
           client_type: app
           enabled: true
           app_id: wxd5551e8aab2c8f3e
@@ -83,7 +83,7 @@ auth:
       bridge_base_url: https://tinytext.xdarren.com
       bridge_auth_key: "{{ secret `auth.tenants.tinytext.bridge_auth_key` }}"
       providers:
-        - provider: wechat
+        - provider: wechat_web
           client_type: web
           enabled: true
           app_id: wxbb79bd2eb7ece73a
@@ -96,7 +96,7 @@ auth:
       bridge_base_url: http://124.221.158.155:8098
       bridge_auth_key: "{{ secret `auth.tenants.yike.bridge_auth_key` }}"
       providers:
-        - provider: wechat
+        - provider: wechat_miniprogram
           client_type: miniprogram
           enabled: true
           app_id: wx4b158c199ebc23c8

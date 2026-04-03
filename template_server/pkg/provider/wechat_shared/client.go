@@ -1,4 +1,4 @@
-package wechat
+package wechatshared
 
 import (
 	"context"
@@ -15,29 +15,35 @@ import (
 )
 
 const (
-	defaultAPIBaseURL     = "https://api.weixin.qq.com"
-	defaultConnectBaseURL = "https://open.weixin.qq.com/connect/qrconnect"
-	defaultLoginScope     = "snsapi_login"
+	DefaultAPIBaseURL     = "https://api.weixin.qq.com"
+	DefaultConnectBaseURL = "https://open.weixin.qq.com/connect/qrconnect"
+	DefaultLoginScope     = "snsapi_login"
 )
 
-var retryableTokenErrorCodes = map[int]struct{}{
+var RetryableTokenErrorCodes = map[int]struct{}{
 	40001: {},
 	40014: {},
 	42001: {},
 }
 
-type Config struct {
+type BaseConfig struct {
 	AppID                string
 	AppSecret            string
 	APIBaseURL           string
-	ConnectBaseURL       string
-	WebRedirectURI       string
-	LoginScope           string
 	RequestTimeoutSecond int
 }
 
-type Client struct {
-	config     Config
+type WebConfig struct {
+	BaseConfig
+	ConnectBaseURL string
+	WebRedirectURI string
+	LoginScope     string
+}
+
+type Runtime struct {
+	appID      string
+	appSecret  string
+	apiBaseURL string
 	httpClient *http.Client
 }
 
@@ -92,25 +98,24 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("wechat api error: %d %s", e.Code, e.Message)
 }
 
-func NewClient(cfg Config) *Client {
+func NewRuntime(cfg BaseConfig) *Runtime {
 	timeout := cfg.RequestTimeoutSecond
 	if timeout <= 0 {
 		timeout = 5
 	}
-	return &Client{
-		config: cfg,
-		httpClient: &http.Client{
-			Timeout: time.Duration(timeout) * time.Second,
-		},
+	return &Runtime{
+		appID:      strings.TrimSpace(cfg.AppID),
+		appSecret:  strings.TrimSpace(cfg.AppSecret),
+		apiBaseURL: normalizeURL(cfg.APIBaseURL, DefaultAPIBaseURL),
+		httpClient: &http.Client{Timeout: time.Duration(timeout) * time.Second},
 	}
 }
 
-func (c *Client) BuildWebLoginURL(state string) (string, error) {
-	if strings.TrimSpace(c.config.AppID) == "" {
+func (r *Runtime) BuildOAuthURL(connectBaseURL string, redirectURI string, scope string, state string) (string, error) {
+	if strings.TrimSpace(r.appID) == "" {
 		return "", fmt.Errorf("wechat app_id is required")
 	}
-	redirectURI := strings.TrimSpace(c.config.WebRedirectURI)
-	if redirectURI == "" {
+	if strings.TrimSpace(redirectURI) == "" {
 		return "", fmt.Errorf("wechat web_redirect_uri is required")
 	}
 	if strings.TrimSpace(state) == "" {
@@ -118,23 +123,22 @@ func (c *Client) BuildWebLoginURL(state string) (string, error) {
 	}
 
 	query := url.Values{}
-	query.Set("appid", strings.TrimSpace(c.config.AppID))
-	query.Set("redirect_uri", redirectURI)
+	query.Set("appid", r.appID)
+	query.Set("redirect_uri", strings.TrimSpace(redirectURI))
 	query.Set("response_type", "code")
-	query.Set("scope", c.loginScope())
-	query.Set("state", state)
-
-	return c.connectBaseURL() + "?" + query.Encode() + "#wechat_redirect", nil
+	query.Set("scope", fallbackString(scope, DefaultLoginScope))
+	query.Set("state", strings.TrimSpace(state))
+	return normalizeURL(connectBaseURL, DefaultConnectBaseURL) + "?" + query.Encode() + "#wechat_redirect", nil
 }
 
-func (c *Client) ExchangeCode(ctx context.Context, code string) (*OAuthToken, error) {
+func (r *Runtime) ExchangeOAuthCode(ctx context.Context, code string) (*OAuthToken, error) {
 	values := url.Values{}
-	values.Set("appid", strings.TrimSpace(c.config.AppID))
-	values.Set("secret", strings.TrimSpace(c.config.AppSecret))
+	values.Set("appid", r.appID)
+	values.Set("secret", r.appSecret)
 	values.Set("code", strings.TrimSpace(code))
 	values.Set("grant_type", "authorization_code")
 
-	body, err := c.callAPI(ctx, "/sns/oauth2/access_token", values)
+	body, err := r.callAPI(ctx, "/sns/oauth2/access_token", values)
 	if err != nil {
 		return nil, err
 	}
@@ -151,14 +155,14 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*OAuthToken, er
 	return &resp, nil
 }
 
-func (c *Client) ExchangeMiniProgramCode(ctx context.Context, code string) (*MiniProgramSession, error) {
+func (r *Runtime) ExchangeMiniProgramCode(ctx context.Context, code string) (*MiniProgramSession, error) {
 	values := url.Values{}
-	values.Set("appid", strings.TrimSpace(c.config.AppID))
-	values.Set("secret", strings.TrimSpace(c.config.AppSecret))
+	values.Set("appid", r.appID)
+	values.Set("secret", r.appSecret)
 	values.Set("js_code", strings.TrimSpace(code))
 	values.Set("grant_type", "authorization_code")
 
-	body, err := c.callAPI(ctx, "/sns/jscode2session", values)
+	body, err := r.callAPI(ctx, "/sns/jscode2session", values)
 	if err != nil {
 		return nil, err
 	}
@@ -175,13 +179,13 @@ func (c *Client) ExchangeMiniProgramCode(ctx context.Context, code string) (*Min
 	return &resp, nil
 }
 
-func (c *Client) RefreshAccessToken(ctx context.Context, refreshToken string) (*OAuthToken, error) {
+func (r *Runtime) RefreshAccessToken(ctx context.Context, refreshToken string) (*OAuthToken, error) {
 	values := url.Values{}
-	values.Set("appid", strings.TrimSpace(c.config.AppID))
+	values.Set("appid", r.appID)
 	values.Set("grant_type", "refresh_token")
 	values.Set("refresh_token", strings.TrimSpace(refreshToken))
 
-	body, err := c.callAPI(ctx, "/sns/oauth2/refresh_token", values)
+	body, err := r.callAPI(ctx, "/sns/oauth2/refresh_token", values)
 	if err != nil {
 		return nil, err
 	}
@@ -198,12 +202,12 @@ func (c *Client) RefreshAccessToken(ctx context.Context, refreshToken string) (*
 	return &resp, nil
 }
 
-func (c *Client) VerifyAccessToken(ctx context.Context, accessToken, openID string) error {
+func (r *Runtime) VerifyAccessToken(ctx context.Context, accessToken string, openID string) error {
 	values := url.Values{}
 	values.Set("access_token", strings.TrimSpace(accessToken))
 	values.Set("openid", strings.TrimSpace(openID))
 
-	body, err := c.callAPI(ctx, "/sns/auth", values)
+	body, err := r.callAPI(ctx, "/sns/auth", values)
 	if err != nil {
 		return err
 	}
@@ -214,36 +218,13 @@ func (c *Client) VerifyAccessToken(ctx context.Context, accessToken, openID stri
 	return buildAPIError(resp.ErrCode, resp.ErrMsg)
 }
 
-func (c *Client) EnsureAccessTokenValid(ctx context.Context, token *OAuthToken) (*OAuthToken, error) {
-	if token == nil {
-		return nil, fmt.Errorf("empty oauth token")
-	}
-	if err := c.VerifyAccessToken(ctx, token.AccessToken, token.OpenID); err == nil {
-		return token, nil
-	} else if !IsRetryableTokenError(err) || strings.TrimSpace(token.RefreshToken) == "" {
-		return nil, err
-	}
-
-	refreshed, err := c.RefreshAccessToken(ctx, token.RefreshToken)
-	if err != nil {
-		return nil, err
-	}
-	if err := c.VerifyAccessToken(ctx, refreshed.AccessToken, refreshed.OpenID); err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(refreshed.UnionID) == "" {
-		refreshed.UnionID = token.UnionID
-	}
-	return refreshed, nil
-}
-
-func (c *Client) FetchUserInfo(ctx context.Context, accessToken, openID string) (*UserInfo, error) {
+func (r *Runtime) FetchUserInfo(ctx context.Context, accessToken string, openID string) (*UserInfo, error) {
 	values := url.Values{}
 	values.Set("access_token", strings.TrimSpace(accessToken))
 	values.Set("openid", strings.TrimSpace(openID))
 	values.Set("lang", "zh_CN")
 
-	body, err := c.callAPI(ctx, "/sns/userinfo", values)
+	body, err := r.callAPI(ctx, "/sns/userinfo", values)
 	if err != nil {
 		return nil, err
 	}
@@ -254,62 +235,28 @@ func (c *Client) FetchUserInfo(ctx context.Context, accessToken, openID string) 
 	if err := buildAPIError(resp.ErrCode, resp.ErrMsg); err != nil {
 		return nil, err
 	}
+	if strings.TrimSpace(resp.OpenID) == "" {
+		return nil, fmt.Errorf("invalid user info response: missing openid")
+	}
 	return &resp, nil
 }
 
-func (c *Client) callAPI(ctx context.Context, endpoint string, values url.Values) ([]byte, error) {
-	baseURL := strings.TrimRight(strings.TrimSpace(c.config.APIBaseURL), "/")
-	if baseURL == "" {
-		baseURL = defaultAPIBaseURL
+func (r *Runtime) EnsureAccessTokenValid(ctx context.Context, token *OAuthToken) (*OAuthToken, error) {
+	if token == nil {
+		return nil, fmt.Errorf("empty oauth token")
 	}
-
-	uri := fmt.Sprintf("%s/%s", baseURL, strings.TrimLeft(strings.TrimSpace(endpoint), "/"))
-	if len(values) > 0 {
-		uri += "?" + values.Encode()
+	if err := r.VerifyAccessToken(ctx, token.AccessToken, token.OpenID); err == nil {
+		return token, nil
+	} else {
+		var apiErr *APIError
+		if !stdErrors.As(err, &apiErr) || !IsRetryableTokenError(apiErr) {
+			return nil, err
+		}
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
-	if err != nil {
-		return nil, err
+	if strings.TrimSpace(token.RefreshToken) == "" {
+		return nil, fmt.Errorf("missing refresh_token for wechat oauth token")
 	}
-	observability.PropagateRequestID(req, ctx)
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("wechat http status: %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return body, nil
-}
-
-func (c *Client) connectBaseURL() string {
-	baseURL := strings.TrimSpace(c.config.ConnectBaseURL)
-	if baseURL == "" {
-		return defaultConnectBaseURL
-	}
-	return baseURL
-}
-
-func (c *Client) loginScope() string {
-	scope := strings.TrimSpace(c.config.LoginScope)
-	if scope == "" {
-		return defaultLoginScope
-	}
-	return scope
-}
-
-func buildAPIError(code int, message string) error {
-	if code == 0 {
-		return nil
-	}
-	return &APIError{Code: code, Message: strings.TrimSpace(message)}
+	return r.RefreshAccessToken(ctx, token.RefreshToken)
 }
 
 func IsRetryableTokenError(err error) bool {
@@ -317,6 +264,59 @@ func IsRetryableTokenError(err error) bool {
 	if !stdErrors.As(err, &apiErr) {
 		return false
 	}
-	_, ok := retryableTokenErrorCodes[apiErr.Code]
+	_, ok := RetryableTokenErrorCodes[apiErr.Code]
 	return ok
+}
+
+func buildAPIError(code int, message string) error {
+	if code == 0 {
+		return nil
+	}
+	return &APIError{
+		Code:    code,
+		Message: strings.TrimSpace(message),
+	}
+}
+
+func (r *Runtime) callAPI(ctx context.Context, path string, query url.Values) ([]byte, error) {
+	endpoint := r.apiBaseURL + path
+	if len(query) > 0 {
+		endpoint += "?" + query.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	observability.PropagateRequestID(req, ctx)
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("wechat http status: %d", resp.StatusCode)
+	}
+	return body, nil
+}
+
+func normalizeURL(value string, fallback string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		trimmed = fallback
+	}
+	return strings.TrimRight(trimmed, "/")
+}
+
+func fallbackString(value string, fallback string) string {
+	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return strings.TrimSpace(value)
 }

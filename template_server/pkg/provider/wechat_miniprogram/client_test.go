@@ -1,4 +1,4 @@
-package wechat
+package wechatminiprogram
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestExchangeMiniProgramCode(t *testing.T) {
+func TestExchangeCode(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,9 +40,9 @@ func TestExchangeMiniProgramCode(t *testing.T) {
 		APIBaseURL: server.URL,
 	})
 
-	resp, err := client.ExchangeMiniProgramCode(context.Background(), "login-code")
+	resp, err := client.ExchangeCode(context.Background(), "login-code")
 	if err != nil {
-		t.Fatalf("ExchangeMiniProgramCode returned error: %v", err)
+		t.Fatalf("ExchangeCode returned error: %v", err)
 	}
 	if resp.OpenID != "openid-123" {
 		t.Fatalf("unexpected openid: %s", resp.OpenID)
@@ -55,7 +55,7 @@ func TestExchangeMiniProgramCode(t *testing.T) {
 	}
 }
 
-func TestExchangeMiniProgramCodeAPIError(t *testing.T) {
+func TestExchangeCodeAPIError(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +70,7 @@ func TestExchangeMiniProgramCodeAPIError(t *testing.T) {
 		APIBaseURL: server.URL,
 	})
 
-	_, err := client.ExchangeMiniProgramCode(context.Background(), "bad-code")
+	_, err := client.ExchangeCode(context.Background(), "bad-code")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

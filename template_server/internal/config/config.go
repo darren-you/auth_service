@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/darren-you/auth_service/providerkeys"
 	"github.com/darren-you/auth_service/template_server/pkg/session"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/service"
@@ -126,6 +127,23 @@ func (c *Config) Validate() error {
 	}
 	if strings.TrimSpace(c.JWT.Secret) == "" {
 		return fmt.Errorf("jwt.secret is required")
+	}
+	for _, tenant := range c.Auth.Tenants {
+		if strings.TrimSpace(tenant.Key) == "" {
+			return fmt.Errorf("auth tenant key is required")
+		}
+		for _, provider := range tenant.Providers {
+			normalizedProvider := providerkeys.NormalizeProvider(provider.Provider)
+			if providerkeys.IsWeChatProvider(normalizedProvider) {
+				expectedClientType := providerkeys.WeChatClientType(normalizedProvider)
+				if providerkeys.NormalizeClientType(provider.ClientType) != expectedClientType {
+					return fmt.Errorf("auth provider %s must use client_type %s", provider.Provider, expectedClientType)
+				}
+				if normalizedProvider == providerkeys.ProviderWeChatWeb && strings.TrimSpace(provider.RedirectURI) == "" {
+					return fmt.Errorf("auth provider %s requires redirect_uri", provider.Provider)
+				}
+			}
+		}
 	}
 
 	return nil

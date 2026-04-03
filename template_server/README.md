@@ -23,9 +23,9 @@
 ## 核心能力
 
 - 微信 Web/App/小程序登录
-  - Web：`login-url` 返回 OAuth 地址
-  - App：`login-url` 预取一次性 `state`
-  - 小程序：前端调用 `wx.login` 获取 `code` 后，直接调用 `POST /api/v1/auth/providers/wechat/callback`
+  - Web：provider 使用 `wechat_web`，`login-url` 返回 OAuth 地址
+  - App：provider 使用 `wechat_app`，`login-url` 只预取一次性 `state`
+  - 小程序：provider 使用 `wechat_miniprogram`，前端调用 `wx.login` 获取 `code` 后，直接调用 `POST /api/v1/auth/providers/wechat_miniprogram/callback`
 - Apple 登录
 - 手机验证码登录
 - Getui 手机号快捷登录
@@ -54,10 +54,10 @@
 
 ## 微信小程序接入约定
 
-- `provider` 固定使用 `wechat`
+- `provider` 固定使用 `wechat_miniprogram`
 - `client_type` 约定使用 `miniprogram`
 - 小程序端先调用微信官方 `wx.login` 获取 `code`
-- 服务端回调接口继续复用 `POST /api/v1/auth/providers/wechat/callback`
+- 服务端回调接口使用 `POST /api/v1/auth/providers/wechat_miniprogram/callback`
 - 请求体最小字段为：
 
 ```json
@@ -68,12 +68,19 @@
 }
 ```
 
-- `miniprogram` 不使用 `GET /api/v1/auth/providers/wechat/login-url` 返回的 `login_url/state`
+- `miniprogram` 不使用 `GET /api/v1/auth/providers/wechat_miniprogram/login-url` 返回的 `login_url/state`
 - 对应租户的 provider 配置需要补齐：
-  - `provider: wechat`
+  - `provider: wechat_miniprogram`
   - `client_type: miniprogram`
   - `app_id`
   - `app_secret`
+
+## 微信 provider 约定
+
+- App 登录：`provider=wechat_app`，`client_type=app`
+- Web 登录：`provider=wechat_web`，`client_type=web`
+- 小程序登录：`provider=wechat_miniprogram`，`client_type=miniprogram`
+- 业务 bridge 仍接收 `provider=wechat`，作为微信用户同步的统一业务语义，不和认证侧 provider 拆分耦合
 
 ## 业务 bridge 对接约定
 

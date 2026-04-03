@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/darren-you/auth_service/providerkeys"
 	"github.com/darren-you/auth_service/template_server/internal/config"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -48,6 +49,17 @@ type authNullTimestampCount struct {
 	Count int64 `db:"count"`
 }
 
+type wechatProviderMigrationRule struct {
+	ClientType string
+	Target     string
+}
+
+var wechatProviderMigrationRules = []wechatProviderMigrationRule{
+	{ClientType: providerkeys.ClientTypeApp, Target: providerkeys.ProviderWeChatApp},
+	{ClientType: providerkeys.ClientTypeWeb, Target: providerkeys.ProviderWeChatWeb},
+	{ClientType: providerkeys.ClientTypeMiniProgram, Target: providerkeys.ProviderWeChatMiniProgram},
+}
+
 func NewAuthRepository(conn sqlx.SqlConn) AuthRepository {
 	return &authRepository{
 		conn:            conn,
@@ -61,6 +73,9 @@ func NewAuthRepository(conn sqlx.SqlConn) AuthRepository {
 
 func (r *authRepository) SyncCatalog(ctx context.Context, tenantConfigs []config.TenantConfig) error {
 	if err := r.ensureCoreTimestampSchema(ctx); err != nil {
+		return err
+	}
+	if err := r.migrateWeChatProviderKeys(ctx); err != nil {
 		return err
 	}
 
@@ -148,6 +163,33 @@ func (r *authRepository) SyncCatalog(ctx context.Context, tenantConfigs []config
 		}
 	}
 
+	return nil
+}
+
+func (r *authRepository) migrateWeChatProviderKeys(ctx context.Context) error {
+	for _, rule := range wechatProviderMigrationRules {
+		if _, err := r.conn.ExecCtx(ctx, `
+			update auth_provider_configs
+			set provider = ?
+			where provider = 'wechat' and client_type = ?
+		`, rule.Target, rule.ClientType); err != nil {
+			return err
+		}
+		if _, err := r.conn.ExecCtx(ctx, `
+			update auth_identities
+			set provider = ?
+			where provider = 'wechat' and client_type = ?
+		`, rule.Target, rule.ClientType); err != nil {
+			return err
+		}
+		if _, err := r.conn.ExecCtx(ctx, `
+			update auth_sessions
+			set provider = ?
+			where provider = 'wechat' and client_type = ?
+		`, rule.Target, rule.ClientType); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
