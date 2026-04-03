@@ -52,6 +52,14 @@ type OAuthToken struct {
 	ErrMsg       string `json:"errmsg"`
 }
 
+type MiniProgramSession struct {
+	SessionKey string `json:"session_key"`
+	OpenID     string `json:"openid"`
+	UnionID    string `json:"unionid"`
+	ErrCode    int    `json:"errcode"`
+	ErrMsg     string `json:"errmsg"`
+}
+
 type UserInfo struct {
 	OpenID     string `json:"openid"`
 	Nickname   string `json:"nickname"`
@@ -139,6 +147,30 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*OAuthToken, er
 	}
 	if strings.TrimSpace(resp.AccessToken) == "" || strings.TrimSpace(resp.OpenID) == "" {
 		return nil, fmt.Errorf("invalid oauth response: missing access_token/openid")
+	}
+	return &resp, nil
+}
+
+func (c *Client) ExchangeMiniProgramCode(ctx context.Context, code string) (*MiniProgramSession, error) {
+	values := url.Values{}
+	values.Set("appid", strings.TrimSpace(c.config.AppID))
+	values.Set("secret", strings.TrimSpace(c.config.AppSecret))
+	values.Set("js_code", strings.TrimSpace(code))
+	values.Set("grant_type", "authorization_code")
+
+	body, err := c.callAPI(ctx, "/sns/jscode2session", values)
+	if err != nil {
+		return nil, err
+	}
+	var resp MiniProgramSession
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	if err := buildAPIError(resp.ErrCode, resp.ErrMsg); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(resp.OpenID) == "" || strings.TrimSpace(resp.SessionKey) == "" {
+		return nil, fmt.Errorf("invalid mini program session response: missing openid/session_key")
 	}
 	return &resp, nil
 }

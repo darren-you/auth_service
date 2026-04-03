@@ -1,3 +1,4 @@
-补齐 GitHub 仓库元数据合同
+补齐 auth_service 小程序微信登录链路
 
-在 repo_meta 中补充 github repo、about、topics 字段，对齐工作区 GitHub About、Homepage、Topics 标准。
+新增微信小程序 code2session 能力，按 client_type=miniprogram 接入 wx.login 登录，
+并补充对应测试与接入说明。

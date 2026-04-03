@@ -117,6 +117,16 @@ func (s *authFlow) GetLoginURL(req *types.GetLoginURLReq) (*LoginURLResponse, er
 		return nil, appErrors.ErrUnsupportedProvider
 	}
 
+	if isWeChatMiniProgramClientType(providerConfig.ClientType) {
+		return &LoginURLResponse{
+			TenantKey:  tenant.TenantKey,
+			Provider:   req.Provider,
+			ClientType: providerConfig.ClientType,
+			LoginURL:   "",
+			State:      "",
+		}, nil
+	}
+
 	state, err := s.allocateState(tenant.TenantKey, req.Provider, providerConfig.ClientType)
 	if err != nil {
 		return nil, err
@@ -132,12 +142,7 @@ func (s *authFlow) GetLoginURL(req *types.GetLoginURLReq) (*LoginURLResponse, er
 		}, nil
 	}
 
-	client := authwechat.NewClient(authwechat.Config{
-		AppID:          providerConfig.AppID,
-		AppSecret:      providerConfig.AppSecret,
-		WebRedirectURI: providerConfig.RedirectURI,
-		LoginScope:     providerConfig.Scope,
-	})
+	client := newWeChatProviderClient(providerConfig)
 	loginURL, err := client.BuildWebLoginURL(state)
 	if err != nil {
 		return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, appErrors.ErrConfigInvalid.Message, err)
@@ -335,8 +340,17 @@ func (s *authFlow) loginWithWeChat(req *ProviderCallbackRequest) (*SessionRespon
 	}
 
 	code := strings.TrimSpace(req.Code)
+	if code == "" {
+		return nil, appErrors.ErrBadRequest
+	}
+
+	client := newWeChatProviderClient(providerConfig)
+	if isWeChatMiniProgramClientType(providerConfig.ClientType) {
+		return s.loginWithWeChatMiniProgram(tenant, providerConfig, client, code, req)
+	}
+
 	state := strings.TrimSpace(req.State)
-	if code == "" || state == "" {
+	if state == "" {
 		return nil, appErrors.ErrBadRequest
 	}
 
@@ -360,12 +374,6 @@ func (s *authFlow) loginWithWeChat(req *ProviderCallbackRequest) (*SessionRespon
 		return nil, appErrors.ErrWeChatStateInvalid
 	}
 
-	client := authwechat.NewClient(authwechat.Config{
-		AppID:          providerConfig.AppID,
-		AppSecret:      providerConfig.AppSecret,
-		WebRedirectURI: providerConfig.RedirectURI,
-		LoginScope:     providerConfig.Scope,
-	})
 	oauthToken, err := client.ExchangeCode(s.ctx, code)
 	if err != nil {
 		s.Errorf(
@@ -441,6 +449,75 @@ func (s *authFlow) loginWithWeChat(req *ProviderCallbackRequest) (*SessionRespon
 			tenant.TenantKey,
 			providerConfig.ClientType,
 			maskTail(oauthToken.OpenID, 6),
+			user.ID,
+			err,
+		)
+		return nil, err
+	}
+	return s.issueSession(tenant, user.ID, "wechat", providerConfig.ClientType, businessUser)
+}
+
+func (s *authFlow) loginWithWeChatMiniProgram(
+	tenant *model.AuthTenant,
+	providerConfig *model.AuthProviderConfig,
+	client *authwechat.Client,
+	code string,
+	req *ProviderCallbackRequest,
+) (*SessionResponse, error) {
+	sessionResp, err := client.ExchangeMiniProgramCode(s.ctx, code)
+	if err != nil {
+		s.Errorf(
+			"wechat miniprogram login exchange code failed: tenant=%s client_type=%s code=%s err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(code, 6),
+			err,
+		)
+		return nil, appErrors.New(
+			appErrors.ErrAuthFailed.Code,
+			appErrors.ErrAuthFailed.HTTPStatus,
+			appErrors.ErrAuthFailed.Message,
+			fmt.Errorf("exchange wechat miniprogram code failed: %w", err),
+		)
+	}
+
+	displayName := firstNonEmpty(req.DisplayName, defaultDisplayName("wechat", sessionResp.OpenID))
+	avatarURL := strings.TrimSpace(req.AvatarURL)
+	user, err := s.upsertIdentityUser(
+		tenant,
+		providerConfig,
+		"wechat",
+		sessionResp.OpenID,
+		sessionResp.UnionID,
+		displayName,
+		avatarURL,
+		"user",
+		marshalJSON(sessionResp),
+	)
+	if err != nil {
+		s.Errorf(
+			"wechat miniprogram login upsert identity user failed: tenant=%s client_type=%s openid=%s err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(sessionResp.OpenID, 6),
+			err,
+		)
+		return nil, err
+	}
+	businessUser, err := s.syncBusinessUser(tenant.TenantKey, "wechat", providerConfig.ClientType, businessBridgeRequest{
+		OpenID:          sessionResp.OpenID,
+		UnionID:         sessionResp.UnionID,
+		DisplayName:     displayName,
+		AvatarURL:       avatarURL,
+		CurrentUserID:   uint(req.CurrentUserID),
+		CurrentUserRole: req.CurrentUserRole,
+	})
+	if err != nil {
+		s.Errorf(
+			"wechat miniprogram login sync business user failed: tenant=%s client_type=%s openid=%s auth_user_id=%d err=%v",
+			tenant.TenantKey,
+			providerConfig.ClientType,
+			maskTail(sessionResp.OpenID, 6),
 			user.ID,
 			err,
 		)
@@ -916,6 +993,19 @@ func buildUserResponse(user *model.AuthUser, tenant *model.AuthTenant) AuthUserR
 
 func normalize(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func isWeChatMiniProgramClientType(clientType string) bool {
+	return normalize(clientType) == "miniprogram"
+}
+
+func newWeChatProviderClient(providerConfig *model.AuthProviderConfig) *authwechat.Client {
+	return authwechat.NewClient(authwechat.Config{
+		AppID:          providerConfig.AppID,
+		AppSecret:      providerConfig.AppSecret,
+		WebRedirectURI: providerConfig.RedirectURI,
+		LoginScope:     providerConfig.Scope,
+	})
 }
 
 func hashToken(token string) string {

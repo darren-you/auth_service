@@ -90,6 +90,20 @@ auth:
           app_secret: "{{ secret `auth.tenants.tinytext.providers.wechat.app_secret` }}"
           redirect_uri: https://tinytext.xdarren.com/wechat/callback
           scope: snsapi_login
+    - key: yike
+      name: Yike
+      enabled: true
+      bridge_base_url: http://124.221.158.155:8098
+      bridge_auth_key: "{{ secret `auth.tenants.yike.bridge_auth_key` }}"
+      providers:
+        - provider: wechat
+          client_type: miniprogram
+          enabled: true
+          app_id: wx4b158c199ebc23c8
+          app_secret: "{{ secret `auth.tenants.yike.providers.wechat.app_secret` }}"
+        - provider: password
+          client_type: default
+          enabled: true
     - key: template_project
       name: Template Project
       enabled: true

@@ -22,7 +22,10 @@
 
 ## 核心能力
 
-- 微信 Web/App 登录（App 侧通过 `login-url` 预取一次性 `state`）
+- 微信 Web/App/小程序登录
+  - Web：`login-url` 返回 OAuth 地址
+  - App：`login-url` 预取一次性 `state`
+  - 小程序：前端调用 `wx.login` 获取 `code` 后，直接调用 `POST /api/v1/auth/providers/wechat/callback`
 - Apple 登录
 - 手机验证码登录
 - Getui 手机号快捷登录
@@ -48,6 +51,51 @@
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+
+## 微信小程序接入约定
+
+- `provider` 固定使用 `wechat`
+- `client_type` 约定使用 `miniprogram`
+- 小程序端先调用微信官方 `wx.login` 获取 `code`
+- 服务端回调接口继续复用 `POST /api/v1/auth/providers/wechat/callback`
+- 请求体最小字段为：
+
+```json
+{
+  "tenant_key": "your_tenant",
+  "client_type": "miniprogram",
+  "code": "wx.login 返回的 code"
+}
+```
+
+- `miniprogram` 不使用 `GET /api/v1/auth/providers/wechat/login-url` 返回的 `login_url/state`
+- 对应租户的 provider 配置需要补齐：
+  - `provider: wechat`
+  - `client_type: miniprogram`
+  - `app_id`
+  - `app_secret`
+
+## 业务 bridge 对接约定
+
+`auth_service` 在认证成功后会回调业务侧 `POST /api/v1/internal/auth/sync`。微信小程序登录时，业务 bridge 至少需要支持以下字段：
+
+```json
+{
+  "tenant_key": "yike",
+  "provider": "wechat",
+  "client_type": "miniprogram",
+  "open_id": "wechat-open-id",
+  "union_id": "wechat-union-id",
+  "display_name": "微信昵称",
+  "avatar_url": "https://...",
+  "current_user_id": 0,
+  "current_user_role": ""
+}
+```
+
+- `provider=wechat` 时，业务侧应优先按 `open_id` 查用户，必要时回退 `union_id`
+- 首次登录需要落本地用户，并返回 `user_id / display_name / avatar_url / role / status`
+- 已有用户再次登录时，应补齐空缺的 `union_id`，并按业务需要更新头像或展示名
 
 ## 部署
 

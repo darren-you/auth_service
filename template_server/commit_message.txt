@@ -1,5 +1,5 @@
-修复认证表时间列漂移导致的扫码登录失败
+补齐 auth_service 小程序微信登录链路
 
-- 服务启动时自动修正 auth_users 与 auth_identities 的时间列 schema 和历史空值
-- 仓储模型改为支持读取历史空 created_at/updated_at 记录
-- 为时间列修复与空时间戳转换补充测试
+- 新增微信小程序 code2session 能力，按 client_type=miniprogram 接入 wx.login 登录
+- 增加 yike 租户微信小程序 provider 配置与 bridge 对接说明
+- 补充对应测试与接入文档
