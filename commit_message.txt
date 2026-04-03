@@ -1,4 +1,4 @@
-补齐 auth_service 小程序微信登录链路
+修复 auth_service 认证目录空时间戳兼容问题
 
-新增微信小程序 code2session 能力，按 client_type=miniprogram 接入 wx.login 登录，
-并补充对应测试与接入说明。
+补齐 auth_tenants 与 auth_provider_configs 的时间戳修复逻辑，
+避免历史空值数据导致 yike 小程序微信登录链路在线上扫描失败。

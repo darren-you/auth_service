@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -38,25 +37,25 @@ type (
 	}
 
 	AuthProviderConfigs struct {
-		Id             uint64    `db:"id"`
-		TenantId       uint64    `db:"tenant_id"`
-		Provider       string    `db:"provider"`
-		ClientType     string    `db:"client_type"`
-		Enabled        int64     `db:"enabled"`
-		AppId          string    `db:"app_id"`
-		AppSecret      string    `db:"app_secret"`
-		RedirectUri    string    `db:"redirect_uri"`
-		Scope          string    `db:"scope"`
-		TeamId         string    `db:"team_id"`
-		ClientId       string    `db:"client_id"`
-		KeyId          string    `db:"key_id"`
-		SigningKey     string    `db:"signing_key"`
-		TestPhone      string    `db:"test_phone"`
-		TestCaptcha    string    `db:"test_captcha"`
-		TestCaptchaKey string    `db:"test_captcha_key"`
-		ExtraJson      string    `db:"extra_json"`
-		CreatedAt      time.Time `db:"created_at"`
-		UpdatedAt      time.Time `db:"updated_at"`
+		Id             uint64       `db:"id"`
+		TenantId       uint64       `db:"tenant_id"`
+		Provider       string       `db:"provider"`
+		ClientType     string       `db:"client_type"`
+		Enabled        int64        `db:"enabled"`
+		AppId          string       `db:"app_id"`
+		AppSecret      string       `db:"app_secret"`
+		RedirectUri    string       `db:"redirect_uri"`
+		Scope          string       `db:"scope"`
+		TeamId         string       `db:"team_id"`
+		ClientId       string       `db:"client_id"`
+		KeyId          string       `db:"key_id"`
+		SigningKey     string       `db:"signing_key"`
+		TestPhone      string       `db:"test_phone"`
+		TestCaptcha    string       `db:"test_captcha"`
+		TestCaptchaKey string       `db:"test_captcha_key"`
+		ExtraJson      string       `db:"extra_json"`
+		CreatedAt      sql.NullTime `db:"created_at"`
+		UpdatedAt      sql.NullTime `db:"updated_at"`
 	}
 )
 

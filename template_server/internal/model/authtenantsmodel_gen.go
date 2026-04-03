@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
@@ -38,12 +37,12 @@ type (
 	}
 
 	AuthTenants struct {
-		Id        uint64    `db:"id"`
-		TenantKey string    `db:"tenant_key"`
-		Name      string    `db:"name"`
-		Enabled   int64     `db:"enabled"`
-		CreatedAt time.Time `db:"created_at"`
-		UpdatedAt time.Time `db:"updated_at"`
+		Id        uint64       `db:"id"`
+		TenantKey string       `db:"tenant_key"`
+		Name      string       `db:"name"`
+		Enabled   int64        `db:"enabled"`
+		CreatedAt sql.NullTime `db:"created_at"`
+		UpdatedAt sql.NullTime `db:"updated_at"`
 	}
 )
 

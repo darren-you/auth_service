@@ -157,8 +157,20 @@ func (r *authRepository) ensureCoreTimestampSchema(ctx context.Context) error {
 		return err
 	}
 
+	tenantsNeedRepair := authTimestampSchemaNeedsRepair(columnStates, "auth_tenants")
+	providerConfigsNeedRepair := authTimestampSchemaNeedsRepair(columnStates, "auth_provider_configs")
 	usersNeedRepair := authTimestampSchemaNeedsRepair(columnStates, "auth_users")
 	identitiesNeedRepair := authTimestampSchemaNeedsRepair(columnStates, "auth_identities")
+
+	var tenantsNullCount authNullTimestampCount
+	if err := r.conn.QueryRowCtx(ctx, &tenantsNullCount, "select count(*) as count from auth_tenants where created_at is null or updated_at is null"); err != nil {
+		return err
+	}
+
+	var providerConfigsNullCount authNullTimestampCount
+	if err := r.conn.QueryRowCtx(ctx, &providerConfigsNullCount, "select count(*) as count from auth_provider_configs where created_at is null or updated_at is null"); err != nil {
+		return err
+	}
 
 	var usersNullCount authNullTimestampCount
 	if err := r.conn.QueryRowCtx(ctx, &usersNullCount, "select count(*) as count from auth_users where created_at is null or updated_at is null"); err != nil {
@@ -170,17 +182,70 @@ func (r *authRepository) ensureCoreTimestampSchema(ctx context.Context) error {
 		return err
 	}
 
-	if !usersNeedRepair && !identitiesNeedRepair && usersNullCount.Count == 0 && identitiesNullCount.Count == 0 {
+	if !tenantsNeedRepair &&
+		!providerConfigsNeedRepair &&
+		!usersNeedRepair &&
+		!identitiesNeedRepair &&
+		tenantsNullCount.Count == 0 &&
+		providerConfigsNullCount.Count == 0 &&
+		usersNullCount.Count == 0 &&
+		identitiesNullCount.Count == 0 {
 		return nil
 	}
 
 	logx.WithContext(ctx).Infof(
-		"repair auth timestamp schema: auth_users_need=%t auth_users_null_rows=%d auth_identities_need=%t auth_identities_null_rows=%d",
+		"repair auth timestamp schema: auth_tenants_need=%t auth_tenants_null_rows=%d auth_provider_configs_need=%t auth_provider_configs_null_rows=%d auth_users_need=%t auth_users_null_rows=%d auth_identities_need=%t auth_identities_null_rows=%d",
+		tenantsNeedRepair,
+		tenantsNullCount.Count,
+		providerConfigsNeedRepair,
+		providerConfigsNullCount.Count,
 		usersNeedRepair,
 		usersNullCount.Count,
 		identitiesNeedRepair,
 		identitiesNullCount.Count,
 	)
+
+	if tenantsNullCount.Count > 0 {
+		if _, err := r.conn.ExecCtx(ctx, `
+			update auth_tenants
+			set
+				created_at = coalesce(created_at, updated_at, now()),
+				updated_at = coalesce(updated_at, created_at, now())
+			where created_at is null or updated_at is null
+		`); err != nil {
+			return err
+		}
+	}
+	if tenantsNeedRepair {
+		if _, err := r.conn.ExecCtx(ctx, `
+			alter table auth_tenants
+			modify column created_at timestamp not null default current_timestamp,
+			modify column updated_at timestamp not null default current_timestamp on update current_timestamp
+		`); err != nil {
+			return err
+		}
+	}
+
+	if providerConfigsNullCount.Count > 0 {
+		if _, err := r.conn.ExecCtx(ctx, `
+			update auth_provider_configs
+			set
+				created_at = coalesce(created_at, updated_at, now()),
+				updated_at = coalesce(updated_at, created_at, now())
+			where created_at is null or updated_at is null
+		`); err != nil {
+			return err
+		}
+	}
+	if providerConfigsNeedRepair {
+		if _, err := r.conn.ExecCtx(ctx, `
+			alter table auth_provider_configs
+			modify column created_at timestamp not null default current_timestamp,
+			modify column updated_at timestamp not null default current_timestamp on update current_timestamp
+		`); err != nil {
+			return err
+		}
+	}
 
 	if usersNullCount.Count > 0 {
 		if _, err := r.conn.ExecCtx(ctx, `
@@ -238,7 +303,7 @@ func (r *authRepository) loadAuthTimestampColumnStates(ctx context.Context) ([]a
 			extra
 		from information_schema.columns
 		where table_schema = database()
-			and table_name in ('auth_users', 'auth_identities')
+			and table_name in ('auth_tenants', 'auth_provider_configs', 'auth_users', 'auth_identities')
 			and column_name in ('created_at', 'updated_at')
 	`); err != nil {
 		return nil, err
@@ -441,8 +506,8 @@ func fromTenantRecord(record *AuthTenants) *AuthTenant {
 		TenantKey: record.TenantKey,
 		Name:      record.Name,
 		Enabled:   record.Enabled == 1,
-		CreatedAt: record.CreatedAt,
-		UpdatedAt: record.UpdatedAt,
+		CreatedAt: nullTimeOrZero(record.CreatedAt),
+		UpdatedAt: nullTimeOrZero(record.UpdatedAt),
 	}
 }
 
@@ -480,8 +545,8 @@ func fromProviderRecord(record *AuthProviderConfigs) *AuthProviderConfig {
 		TestCaptcha:    record.TestCaptcha,
 		TestCaptchaKey: record.TestCaptchaKey,
 		ExtraJSON:      record.ExtraJson,
-		CreatedAt:      record.CreatedAt,
-		UpdatedAt:      record.UpdatedAt,
+		CreatedAt:      nullTimeOrZero(record.CreatedAt),
+		UpdatedAt:      nullTimeOrZero(record.UpdatedAt),
 	}
 }
 
