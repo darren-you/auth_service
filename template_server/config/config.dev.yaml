@@ -107,7 +107,7 @@ auth:
     - key: template_project
       name: Template Project
       enabled: true
-      bridge_base_url: http://124.221.158.155:8104
+      bridge_base_url: http://template_server_test:8080
       bridge_auth_key: "{{ secret `auth.tenants.template_project.bridge_auth_key` }}"
       providers:
         - provider: password
@@ -116,7 +116,7 @@ auth:
     - key: imagen
       name: Imagen
       enabled: true
-      bridge_base_url: http://124.221.158.155:8102
+      bridge_base_url: http://imagen_server_test:8080
       bridge_auth_key: "{{ secret `auth.tenants.imagen.bridge_auth_key` }}"
       providers:
         - provider: password
@@ -125,8 +125,17 @@ auth:
     - key: notification
       name: Notification
       enabled: true
-      bridge_base_url: http://124.221.158.155:8103
+      bridge_base_url: http://notification_server_test:8080
       bridge_auth_key: "{{ secret `auth.tenants.notification.bridge_auth_key` }}"
+      providers:
+        - provider: password
+          client_type: default
+          enabled: true
+    - key: yike
+      name: Yike
+      enabled: true
+      bridge_base_url: http://yike_server_test:8080
+      bridge_auth_key: "{{ secret `auth.tenants.yike.bridge_auth_key` }}"
       providers:
         - provider: password
           client_type: default

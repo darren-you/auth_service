@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -128,22 +130,80 @@ func (c *Config) Validate() error {
 	if strings.TrimSpace(c.JWT.Secret) == "" {
 		return fmt.Errorf("jwt.secret is required")
 	}
-	for _, tenant := range c.Auth.Tenants {
-		if strings.TrimSpace(tenant.Key) == "" {
-			return fmt.Errorf("auth tenant key is required")
+	if err := validateTenantConfigs(c.Auth.Tenants); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateTenantConfigs(tenants []TenantConfig) error {
+	seen := make(map[string]struct{}, len(tenants))
+
+	for idx, tenant := range tenants {
+		tenantKey := normalizeKey(tenant.Key)
+		if tenantKey == "" {
+			return fmt.Errorf("auth.tenants[%d].key is required", idx)
 		}
-		for _, provider := range tenant.Providers {
-			normalizedProvider := providerkeys.NormalizeProvider(provider.Provider)
-			if providerkeys.IsWeChatProvider(normalizedProvider) {
-				expectedClientType := providerkeys.WeChatClientType(normalizedProvider)
-				if providerkeys.NormalizeClientType(provider.ClientType) != expectedClientType {
-					return fmt.Errorf("auth provider %s must use client_type %s", provider.Provider, expectedClientType)
-				}
-				if normalizedProvider == providerkeys.ProviderWeChatWeb && strings.TrimSpace(provider.RedirectURI) == "" {
-					return fmt.Errorf("auth provider %s requires redirect_uri", provider.Provider)
-				}
-			}
+		if _, exists := seen[tenantKey]; exists {
+			return fmt.Errorf("duplicate auth tenant key: %s", tenant.Key)
 		}
+		seen[tenantKey] = struct{}{}
+
+		if err := validateTenantProviderConfigs(tenant); err != nil {
+			return err
+		}
+		if err := validateTenantBridgeBaseURL(tenant); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateTenantProviderConfigs(tenant TenantConfig) error {
+	for _, provider := range tenant.Providers {
+		normalizedProvider := providerkeys.NormalizeProvider(provider.Provider)
+		if !providerkeys.IsWeChatProvider(normalizedProvider) {
+			continue
+		}
+
+		expectedClientType := providerkeys.WeChatClientType(normalizedProvider)
+		if providerkeys.NormalizeClientType(provider.ClientType) != expectedClientType {
+			return fmt.Errorf("auth provider %s must use client_type %s", provider.Provider, expectedClientType)
+		}
+		if normalizedProvider == providerkeys.ProviderWeChatWeb && strings.TrimSpace(provider.RedirectURI) == "" {
+			return fmt.Errorf("auth provider %s requires redirect_uri", provider.Provider)
+		}
+	}
+
+	return nil
+}
+
+func validateTenantBridgeBaseURL(tenant TenantConfig) error {
+	bridgeBaseURL := strings.TrimSpace(tenant.BridgeBaseURL)
+	if bridgeBaseURL == "" {
+		return nil
+	}
+
+	parsedURL, err := url.Parse(bridgeBaseURL)
+	if err != nil || strings.TrimSpace(parsedURL.Scheme) == "" || strings.TrimSpace(parsedURL.Host) == "" {
+		return fmt.Errorf("auth.tenants[%s].bridge_base_url is invalid: %s", tenant.Key, bridgeBaseURL)
+	}
+
+	switch strings.ToLower(strings.TrimSpace(parsedURL.Scheme)) {
+	case "http", "https":
+	default:
+		return fmt.Errorf("auth.tenants[%s].bridge_base_url must use http or https: %s", tenant.Key, bridgeBaseURL)
+	}
+
+	host := strings.TrimSpace(parsedURL.Hostname())
+	switch strings.ToLower(host) {
+	case "", "localhost", "host.docker.internal":
+		return fmt.Errorf("auth.tenants[%s].bridge_base_url must use container-network hostname or domain, not host loopback/ip alias: %s", tenant.Key, bridgeBaseURL)
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return fmt.Errorf("auth.tenants[%s].bridge_base_url must use container-network hostname or domain, not host loopback/ip alias: %s", tenant.Key, bridgeBaseURL)
 	}
 
 	return nil

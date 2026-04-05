@@ -73,3 +73,4 @@
 ## Server SSH
 
 - 当需要排查线上容器、端口映射、线上实际 YAML 配置、nginx 转发或日志问题时，先从当前项目 `deploy_config.sh` 识别目标环境，再优先使用 `workspace-server-ssh-diagnose` Skill 或 `remote.server.inspect`；不要预设远端部署目录、容器名、Docker 网络名或对外域名。
+- 同一轮线上排障里，`deploy_config.sh` 只负责首次解析真实 SSH 入口与目标容器；一旦已经解析出运行时上下文，后续命令优先复用当前 shell 上下文或运行时快照，不要为每一步重复走整条解析链。

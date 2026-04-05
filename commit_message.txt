@@ -1,4 +1,3 @@
-修复 yike 小程序登录业务桥接地址
+统一 auth_service 租户 bridge 容器网络地址
 
-- 将 auth_service 中 yike 租户的 bridge_base_url 改为容器网络可达地址
-- 消除 auth_service 回调 yike 内部同步接口的超时问题
+将同机租户的 bridge_base_url 全部切到容器网络地址，补齐 yike 租户，并为 bridge_base_url 增加防宿主机 IP/loopback 误配的启动校验与单测。
