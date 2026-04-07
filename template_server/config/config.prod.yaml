@@ -131,12 +131,3 @@ auth:
         - provider: password
           client_type: default
           enabled: true
-    - key: yike
-      name: Yike
-      enabled: true
-      bridge_base_url: http://yike_server_prod:8080
-      bridge_auth_key: "{{ secret `auth.tenants.yike.bridge_auth_key` }}"
-      providers:
-        - provider: password
-          client_type: default
-          enabled: true

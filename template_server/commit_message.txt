@@ -1,4 +1,4 @@
-补齐微信小程序 session_key 业务桥接
+修复 auth_service 重复 yike 租户配置
 
-auth_service 在微信小程序登录成功后，
-向业务 bridge 透传 session_key，供 yike 等业务服务本地持久化微信会话标识。
+删除 auth_service 模板配置里重复声明的 yike tenant，
+避免生产与测试环境渲染后的 config.yaml 因重复租户键启动失败。
