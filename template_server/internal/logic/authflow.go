@@ -73,6 +73,7 @@ type businessBridgeRequest struct {
 	Password        string `json:"password,omitempty"`
 	OpenID          string `json:"open_id,omitempty"`
 	UnionID         string `json:"union_id,omitempty"`
+	SessionKey      string `json:"session_key,omitempty"`
 	AppleUserID     string `json:"apple_user_id,omitempty"`
 	Phone           string `json:"phone,omitempty"`
 	DeviceID        string `json:"device_id,omitempty"`

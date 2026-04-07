@@ -1,4 +1,4 @@
-重构微信认证 provider 拆分
+补齐微信小程序 session_key 业务桥接
 
-- 拆分 wechat_app、wechat_web、wechat_miniprogram 三套 provider 与登录流程
-- 增加历史 provider 数据迁移、配置校验与文档更新
+auth_service 在微信小程序登录成功后，
+向业务 bridge 透传 session_key，供 yike 等业务服务本地持久化微信会话标识。

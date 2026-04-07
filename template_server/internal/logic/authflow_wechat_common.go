@@ -40,6 +40,7 @@ func (s *authFlow) syncWeChatBusinessUser(
 	providerConfig *model.AuthProviderConfig,
 	openID string,
 	unionID string,
+	sessionKey string,
 	displayName string,
 	avatarURL string,
 	req *ProviderCallbackRequest,
@@ -47,6 +48,7 @@ func (s *authFlow) syncWeChatBusinessUser(
 	return s.syncBusinessUser(tenant.TenantKey, "wechat", providerConfig.ClientType, businessBridgeRequest{
 		OpenID:          openID,
 		UnionID:         unionID,
+		SessionKey:      sessionKey,
 		DisplayName:     displayName,
 		AvatarURL:       avatarURL,
 		CurrentUserID:   uint(req.CurrentUserID),

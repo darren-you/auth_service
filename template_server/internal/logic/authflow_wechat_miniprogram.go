@@ -63,7 +63,7 @@ func (s *authFlow) loginWithWeChatMiniProgram(req *ProviderCallbackRequest) (*Se
 		return nil, err
 	}
 
-	businessUser, err := s.syncWeChatBusinessUser(tenant, providerConfig, sessionResp.OpenID, sessionResp.UnionID, displayName, avatarURL, req)
+	businessUser, err := s.syncWeChatBusinessUser(tenant, providerConfig, sessionResp.OpenID, sessionResp.UnionID, sessionResp.SessionKey, displayName, avatarURL, req)
 	if err != nil {
 		s.Errorf(
 			"wechat miniprogram login sync business user failed: tenant=%s openid=%s auth_user_id=%d err=%v",

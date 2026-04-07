@@ -93,6 +93,7 @@
   "client_type": "miniprogram",
   "open_id": "wechat-open-id",
   "union_id": "wechat-union-id",
+  "session_key": "wechat-session-key",
   "display_name": "微信昵称",
   "avatar_url": "https://...",
   "current_user_id": 0,
@@ -101,6 +102,7 @@
 ```
 
 - `provider=wechat` 时，业务侧应优先按 `open_id` 查用户，必要时回退 `union_id`
+- 微信小程序链路下，业务侧应落库保存 `open_id / union_id / session_key`
 - 首次登录需要落本地用户，并返回 `user_id / display_name / avatar_url / role / status`
 - 已有用户再次登录时，应补齐空缺的 `union_id`，并按业务需要更新头像或展示名
 

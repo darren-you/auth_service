@@ -1,3 +1,4 @@
-统一 auth_service 租户 bridge 容器网络地址
+补齐微信小程序 session_key 业务桥接
 
-将同机租户的 bridge_base_url 全部切到容器网络地址，补齐 yike 租户，并为 bridge_base_url 增加防宿主机 IP/loopback 误配的启动校验与单测。
+auth_service 在微信小程序登录成功后，
+向业务 bridge 透传 session_key，并同步更新 bridge 对接说明。

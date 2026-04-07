@@ -97,7 +97,7 @@ func (s *authFlow) loginWithWeChatApp(req *ProviderCallbackRequest) (*SessionRes
 		return nil, err
 	}
 
-	businessUser, err := s.syncWeChatBusinessUser(tenant, providerConfig, oauthToken.OpenID, oauthToken.UnionID, displayName, avatarURL, req)
+	businessUser, err := s.syncWeChatBusinessUser(tenant, providerConfig, oauthToken.OpenID, oauthToken.UnionID, "", displayName, avatarURL, req)
 	if err != nil {
 		s.Errorf(
 			"wechat app login sync business user failed: tenant=%s openid=%s auth_user_id=%d err=%v",

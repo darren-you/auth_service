@@ -45,7 +45,7 @@
 - 前端通过 `wx.login` 获取 `code`
 - 业务后端把 `tenant_key + client_type=miniprogram + code` 转发到 `POST /api/v1/auth/providers/wechat_miniprogram/callback`
 - `auth_service` 使用租户级 `app_id / app_secret` 执行 `code2session`
-- 业务 bridge 需要接收 `provider=wechat`，并按 `open_id / union_id` 同步本地用户
+- 业务 bridge 需要接收 `provider=wechat`，并按 `open_id / union_id / session_key` 同步本地用户
 
 微信 provider 拆分约定：
 
