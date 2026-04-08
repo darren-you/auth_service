@@ -1,4 +1,4 @@
-修复 auth_service 重复 yike 租户配置
+为 yike 启用手机号验证码登录 provider
 
-删除 auth_service 模板配置里重复声明的 yike tenant，
-避免生产与测试环境渲染后的 config.yaml 因重复租户键启动失败。
+补齐 auth_service 中 yike 租户的 phone/miniprogram 配置，
+并挂接独立的 yike 短信 secret key。

@@ -104,6 +104,13 @@ auth:
         - provider: password
           client_type: default
           enabled: true
+        - provider: phone
+          client_type: miniprogram
+          enabled: true
+          test_phone: "18912345678"
+          test_captcha: "1234"
+          test_captcha_key: test-captcha-key
+          extra_json: "{{ secret `auth.tenants.yike.providers.phone.extra_json` }}"
     - key: template_project
       name: Template Project
       enabled: true
