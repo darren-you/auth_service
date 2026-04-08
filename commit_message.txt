@@ -1,4 +1,4 @@
-为 yike 启用手机号验证码登录 provider
+同步 fast_deploy 子模块到 SSH 合同自修复版本
 
-补齐 auth_service 中 yike 租户的 phone/miniprogram 配置，
-并挂接独立的 yike 短信 secret key。
+将内嵌 fast_deploy 子模块从 c996cc0 对齐到 bb7ec69，
+收口工作区残留的子模块脏状态。
