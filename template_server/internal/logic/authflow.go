@@ -955,7 +955,7 @@ func (s *authFlow) loginWithPhoneCaptcha(tenant *model.AuthTenant, providerConfi
 		return nil, appErrors.ErrCaptchaInvalid
 	}
 
-	return s.issuePhoneSession(tenant, providerConfig, phone, req.DisplayName, req.AvatarURL, map[string]string{
+	return s.issuePhoneSession(tenant, providerConfig, phone, req.DisplayName, req.AvatarURL, uint(req.CurrentUserID), req.CurrentUserRole, map[string]string{
 		"phone":        phone,
 		"login_method": "captcha",
 	})
@@ -988,23 +988,34 @@ func (s *authFlow) loginWithPhoneOneClick(tenant *model.AuthTenant, providerConf
 		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
 	}
 
-	return s.issuePhoneSession(tenant, providerConfig, phone, req.DisplayName, req.AvatarURL, map[string]string{
+	return s.issuePhoneSession(tenant, providerConfig, phone, req.DisplayName, req.AvatarURL, uint(req.CurrentUserID), req.CurrentUserRole, map[string]string{
 		"phone":        phone,
 		"login_method": "one_click",
 		"gyuid":        gyuid,
 	})
 }
 
-func (s *authFlow) issuePhoneSession(tenant *model.AuthTenant, providerConfig *model.AuthProviderConfig, phone string, displayName string, avatarURL string, profile map[string]string) (*SessionResponse, error) {
+func (s *authFlow) issuePhoneSession(
+	tenant *model.AuthTenant,
+	providerConfig *model.AuthProviderConfig,
+	phone string,
+	displayName string,
+	avatarURL string,
+	currentUserID uint,
+	currentUserRole string,
+	profile map[string]string,
+) (*SessionResponse, error) {
 	displayName = firstNonEmpty(displayName, maskPhone(phone))
 	user, err := s.upsertIdentityUser(tenant, providerConfig, "phone", phone, "", displayName, avatarURL, "user", marshalJSON(profile))
 	if err != nil {
 		return nil, err
 	}
 	businessUser, err := s.syncBusinessUser(tenant.TenantKey, "phone", providerConfig.ClientType, businessBridgeRequest{
-		Phone:       phone,
-		DisplayName: displayName,
-		AvatarURL:   avatarURL,
+		Phone:           phone,
+		DisplayName:     displayName,
+		AvatarURL:       avatarURL,
+		CurrentUserID:   currentUserID,
+		CurrentUserRole: currentUserRole,
 	})
 	if err != nil {
 		return nil, err

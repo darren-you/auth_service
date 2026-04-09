@@ -28,6 +28,7 @@
   - 小程序：provider 使用 `wechat_miniprogram`，前端调用 `wx.login` 获取 `code` 后，直接调用 `POST /api/v1/auth/providers/wechat_miniprogram/callback`
 - Apple 登录
 - 手机验证码登录
+- 手机验证码登录与已登录态绑定当前业务账号
 - Getui 手机号快捷登录
 - 游客登录
 - 多租户 `tenant / provider / client_type` 配置同步
@@ -105,6 +106,7 @@
 - 微信小程序链路下，业务侧应落库保存 `open_id / union_id / session_key`
 - 首次登录需要落本地用户，并返回 `user_id / display_name / avatar_url / role / status`
 - 已有用户再次登录时，应补齐空缺的 `union_id`，并按业务需要更新头像或展示名
+- 如果业务侧在“已登录态绑定手机号 / 绑定新登录方式”场景下调用 provider callback，应透传 `current_user_id / current_user_role`，业务 bridge 需要把该登录方式绑定到当前业务用户，而不是创建新的业务账号
 
 ## 部署
 

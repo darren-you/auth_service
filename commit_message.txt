@@ -1,4 +1,4 @@
-同步 fast_deploy 子模块到 SSH 合同自修复版本
+支持业务侧已登录态绑定手机号时透传当前用户上下文
 
-将内嵌 fast_deploy 子模块从 c996cc0 对齐到 bb7ec69，
-收口工作区残留的子模块脏状态。
+- 手机验证码登录与一键登录链路补充 current_user_id / current_user_role 透传
+- 允许业务 bridge 将新手机号绑定到当前业务账号而不是新建业务用户
