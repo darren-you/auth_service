@@ -33,14 +33,15 @@ type Config struct {
 }
 
 type Claims struct {
-	UserID    uint   `json:"user_id"`
-	Username  string `json:"username,omitempty"`
-	Email     string `json:"email,omitempty"`
-	Role      string `json:"role,omitempty"`
-	TenantKey string `json:"tenant_key,omitempty"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-	Status    string `json:"status,omitempty"`
-	TokenType string `json:"token_type"`
+	AuthUserID uint   `json:"auth_user_id,omitempty"`
+	UserID     uint   `json:"user_id"`
+	Username   string `json:"username,omitempty"`
+	Email      string `json:"email,omitempty"`
+	Role       string `json:"role,omitempty"`
+	TenantKey  string `json:"tenant_key,omitempty"`
+	AvatarURL  string `json:"avatar_url,omitempty"`
+	Status     string `json:"status,omitempty"`
+	TokenType  string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
@@ -92,28 +93,38 @@ func (c Config) validate() error {
 }
 
 func GenerateAccessToken(userID uint, username, email, role string, cfg Config) (string, error) {
-	return generateAccessTokenWithProfile(userID, username, email, role, "", "", "", cfg)
+	return generateAccessTokenWithProfile(0, userID, username, email, role, "", "", "", cfg)
 }
 
 func GenerateAccessTokenWithProfile(userID uint, username, email, role, tenantKey, avatarURL, status string, cfg Config) (string, error) {
-	return generateAccessTokenWithProfile(userID, username, email, role, tenantKey, avatarURL, status, cfg)
+	return generateAccessTokenWithProfile(0, userID, username, email, role, tenantKey, avatarURL, status, cfg)
 }
 
-func generateAccessTokenWithProfile(userID uint, username, email, role, tenantKey, avatarURL, status string, cfg Config) (string, error) {
+func GenerateAccessTokenWithAuthUserProfile(
+	authUserID uint,
+	userID uint,
+	username, email, role, tenantKey, avatarURL, status string,
+	cfg Config,
+) (string, error) {
+	return generateAccessTokenWithProfile(authUserID, userID, username, email, role, tenantKey, avatarURL, status, cfg)
+}
+
+func generateAccessTokenWithProfile(authUserID uint, userID uint, username, email, role, tenantKey, avatarURL, status string, cfg Config) (string, error) {
 	if err := cfg.validate(); err != nil {
 		return "", err
 	}
 
 	now := time.Now()
 	claims := Claims{
-		UserID:    userID,
-		Username:  strings.TrimSpace(username),
-		Email:     strings.TrimSpace(email),
-		Role:      strings.TrimSpace(role),
-		TenantKey: strings.TrimSpace(tenantKey),
-		AvatarURL: strings.TrimSpace(avatarURL),
-		Status:    strings.TrimSpace(status),
-		TokenType: cfg.normalizedAccessTokenType(),
+		AuthUserID: authUserID,
+		UserID:     userID,
+		Username:   strings.TrimSpace(username),
+		Email:      strings.TrimSpace(email),
+		Role:       strings.TrimSpace(role),
+		TenantKey:  strings.TrimSpace(tenantKey),
+		AvatarURL:  strings.TrimSpace(avatarURL),
+		Status:     strings.TrimSpace(status),
+		TokenType:  cfg.normalizedAccessTokenType(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(cfg.AccessExpiry)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -156,7 +167,16 @@ func GenerateTokenPair(userID uint, username, email, role string, cfg Config) (*
 }
 
 func GenerateTokenPairWithProfile(userID uint, username, email, role, tenantKey, avatarURL, status string, cfg Config) (*TokenPair, error) {
-	accessToken, err := GenerateAccessTokenWithProfile(userID, username, email, role, tenantKey, avatarURL, status, cfg)
+	return GenerateTokenPairWithAuthUserProfile(0, userID, username, email, role, tenantKey, avatarURL, status, cfg)
+}
+
+func GenerateTokenPairWithAuthUserProfile(
+	authUserID uint,
+	userID uint,
+	username, email, role, tenantKey, avatarURL, status string,
+	cfg Config,
+) (*TokenPair, error) {
+	accessToken, err := GenerateAccessTokenWithAuthUserProfile(authUserID, userID, username, email, role, tenantKey, avatarURL, status, cfg)
 	if err != nil {
 		return nil, err
 	}

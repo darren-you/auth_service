@@ -13,6 +13,20 @@ type AuthUserResp struct {
 	LastLoginAt int64  `json:"last_login_at,optional"`
 }
 
+type UpdateMeReq struct {
+	DisplayName string `json:"display_name,optional"`
+	AvatarURL   string `json:"avatar_url,optional"`
+}
+
+type InternalUpdateUserReq struct {
+	TenantKey   string `json:"tenant_key"`
+	UserID      uint64 `json:"user_id"`
+	DisplayName string `json:"display_name,optional"`
+	AvatarURL   string `json:"avatar_url,optional"`
+	Role        string `json:"role,optional"`
+	Status      string `json:"status,optional"`
+}
+
 type GetLoginURLReq struct {
 	Provider   string `path:"provider"`
 	TenantKey  string `form:"tenant_key"`

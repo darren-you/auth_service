@@ -12,6 +12,17 @@ import (
 )
 
 type currentUserContextKey struct{}
+type accessIdentityContextKey struct{}
+
+type AccessIdentity struct {
+	AuthUserID  uint
+	TokenUserID uint
+	TenantKey   string
+	DisplayName string
+	AvatarURL   string
+	Role        string
+	Status      string
+}
 
 type AccessAuthMiddleware struct {
 	sessionConfig session.Config
@@ -50,7 +61,17 @@ func (m *AccessAuthMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 			Role:        claims.Role,
 			Status:      profileStatus(claims.Status),
 		}
+		accessIdentity := &AccessIdentity{
+			AuthUserID:  claims.AuthUserID,
+			TokenUserID: claims.UserID,
+			TenantKey:   claims.TenantKey,
+			DisplayName: claims.Username,
+			AvatarURL:   claims.AvatarURL,
+			Role:        claims.Role,
+			Status:      profileStatus(claims.Status),
+		}
 		ctx := context.WithValue(r.Context(), currentUserContextKey{}, currentUser)
+		ctx = context.WithValue(ctx, accessIdentityContextKey{}, accessIdentity)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
@@ -61,6 +82,14 @@ func CurrentUserFromContext(ctx context.Context) (*types.AuthUserResp, error) {
 		return nil, appErrors.ErrUnauthorized
 	}
 	return currentUser, nil
+}
+
+func CurrentAccessIdentityFromContext(ctx context.Context) (*AccessIdentity, error) {
+	identity, ok := ctx.Value(accessIdentityContextKey{}).(*AccessIdentity)
+	if !ok || identity == nil {
+		return nil, appErrors.ErrUnauthorized
+	}
+	return identity, nil
 }
 
 func profileStatus(status string) string {

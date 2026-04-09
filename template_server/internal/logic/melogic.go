@@ -5,8 +5,6 @@ package logic
 
 import (
 	"context"
-
-	"github.com/darren-you/auth_service/template_server/internal/middleware"
 	"github.com/darren-you/auth_service/template_server/internal/svc"
 	"github.com/darren-you/auth_service/template_server/internal/types"
 
@@ -28,5 +26,9 @@ func NewMeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *MeLogic {
 }
 
 func (l *MeLogic) Me() (resp *types.AuthUserResp, err error) {
-	return middleware.CurrentUserFromContext(l.ctx)
+	current, err := resolveCurrentAuthUserContext(l.ctx, l.svcCtx)
+	if err != nil {
+		return nil, err
+	}
+	return buildCurrentAuthUserResp(current), nil
 }

@@ -52,6 +52,8 @@
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+- `PUT /api/v1/auth/me`
+- `PUT /api/v1/auth/internal/users`：仅供业务 server 使用 `X-Auth-Service-Key` 回写指定业务用户的共享资料字段
 
 ## 微信小程序接入约定
 
@@ -107,6 +109,8 @@
 - 首次登录需要落本地用户，并返回 `user_id / display_name / avatar_url / role / status`
 - 已有用户再次登录时，应补齐空缺的 `union_id`，并按业务需要更新头像或展示名
 - 如果业务侧在“已登录态绑定手机号 / 绑定新登录方式”场景下调用 provider callback，应透传 `current_user_id / current_user_role`，业务 bridge 需要把该登录方式绑定到当前业务用户，而不是创建新的业务账号
+- 当业务侧允许用户修改共享资料字段（如昵称、头像）时，应同步调用 `PUT /api/v1/auth/me` 回写认证域，保证后续登录、刷新 token 和 `/auth/me` 的资料读写一致
+- 当业务侧管理后台需要修改其他用户的共享资料字段（如昵称、头像、角色、状态）时，应调用 `PUT /api/v1/auth/internal/users`，并使用租户配置中的 `bridge_auth_key` 作为受信鉴权，不再直接把这些字段只写在业务库里
 
 ## 部署
 

@@ -89,6 +89,11 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type UpdateMeRequest struct {
+	DisplayName string `json:"display_name,omitempty"`
+	AvatarURL   string `json:"avatar_url,omitempty"`
+}
+
 type LogoutRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
@@ -210,12 +215,36 @@ func (c *Client) Refresh(ctx context.Context, refreshToken string) (*SessionResp
 	return &resp, nil
 }
 
+func (c *Client) GetMe(ctx context.Context, authorizationHeader string) (*UserProfile, error) {
+	endpoint := fmt.Sprintf("%s/api/v1/auth/me", c.baseURL)
+	headers := map[string]string{
+		"Authorization": strings.TrimSpace(authorizationHeader),
+	}
+	var resp UserProfile
+	if err := c.doJSONWithHeaders(ctx, http.MethodGet, endpoint, nil, &resp, headers); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *Client) UpdateMe(ctx context.Context, authorizationHeader string, req UpdateMeRequest) (*UserProfile, error) {
+	endpoint := fmt.Sprintf("%s/api/v1/auth/me", c.baseURL)
+	headers := map[string]string{
+		"Authorization": strings.TrimSpace(authorizationHeader),
+	}
+	var resp UserProfile
+	if err := c.doJSONWithHeaders(ctx, http.MethodPut, endpoint, req, &resp, headers); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (c *Client) Logout(ctx context.Context, refreshToken string) error {
 	endpoint := fmt.Sprintf("%s/api/v1/auth/logout", c.baseURL)
 	return c.doJSON(ctx, http.MethodPost, endpoint, LogoutRequest{RefreshToken: strings.TrimSpace(refreshToken)}, nil)
 }
 
-func (c *Client) doJSON(ctx context.Context, method string, endpoint string, reqBody interface{}, out interface{}) error {
+func (c *Client) doJSONWithHeaders(ctx context.Context, method string, endpoint string, reqBody interface{}, out interface{}, headers map[string]string) error {
 	if c.baseURL == "" {
 		return fmt.Errorf("auth_service base url is empty")
 	}
@@ -237,6 +266,12 @@ func (c *Client) doJSON(ctx context.Context, method string, endpoint string, req
 	}
 	req.Header.Set("Content-Type", "application/json")
 	propagateRequestID(req, ctx)
+	for key, value := range headers {
+		if strings.TrimSpace(key) == "" || strings.TrimSpace(value) == "" {
+			continue
+		}
+		req.Header.Set(key, value)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -277,6 +312,10 @@ func (c *Client) doJSON(ctx context.Context, method string, endpoint string, req
 		return fmt.Errorf("decode auth_service payload failed: %w", err)
 	}
 	return nil
+}
+
+func (c *Client) doJSON(ctx context.Context, method string, endpoint string, reqBody interface{}, out interface{}) error {
+	return c.doJSONWithHeaders(ctx, method, endpoint, reqBody, out, nil)
 }
 
 func propagateRequestID(req *http.Request, ctx context.Context) {

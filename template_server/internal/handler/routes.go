@@ -67,4 +67,24 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			Handler: MeHandler(serverCtx),
 		}),
 	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares([]rest.Middleware{
+			middleware.NewAccessAuthMiddleware(serverCtx).Handle,
+		}, rest.Route{
+			Method:  http.MethodPut,
+			Path:    "/api/v1/auth/me",
+			Handler: UpdateMeHandler(serverCtx),
+		}),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPut,
+				Path:    "/api/v1/auth/internal/users",
+				Handler: InternalUpdateUserHandler(serverCtx),
+			},
+		},
+	)
 }

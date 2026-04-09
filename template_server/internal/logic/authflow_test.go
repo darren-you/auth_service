@@ -40,12 +40,24 @@ func (s *authRepoStub) FindUserByIdentity(context.Context, uint, string, string)
 	panic("unexpected call to FindUserByIdentity")
 }
 
+func (s *authRepoStub) FindUserByTokenUserID(context.Context, uint, uint) (*model.AuthUser, error) {
+	panic("unexpected call to FindUserByTokenUserID")
+}
+
 func (s *authRepoStub) CreateUserWithIdentity(context.Context, *model.AuthUser, *model.AuthIdentity) error {
 	panic("unexpected call to CreateUserWithIdentity")
 }
 
 func (s *authRepoStub) UpdateUserLogin(context.Context, uint, string, string, time.Time) error {
 	panic("unexpected call to UpdateUserLogin")
+}
+
+func (s *authRepoStub) UpdateUserTokenUserID(context.Context, uint, uint) error {
+	panic("unexpected call to UpdateUserTokenUserID")
+}
+
+func (s *authRepoStub) UpdateUserProfileAndActiveSessions(context.Context, uint, string, string, string, string) error {
+	panic("unexpected call to UpdateUserProfileAndActiveSessions")
 }
 
 func (s *authRepoStub) UpdateIdentity(context.Context, uint, string, string, string) error {
@@ -62,6 +74,10 @@ func (s *authRepoStub) CreateSession(context.Context, *model.AuthSession) error 
 
 func (s *authRepoStub) FindSessionByHash(context.Context, string) (*model.AuthSession, error) {
 	panic("unexpected call to FindSessionByHash")
+}
+
+func (s *authRepoStub) FindLatestActiveSessionByTokenUserID(context.Context, uint, uint) (*model.AuthSession, error) {
+	panic("unexpected call to FindLatestActiveSessionByTokenUserID")
 }
 
 func (s *authRepoStub) RevokeSessionByHash(context.Context, string, time.Time) error {

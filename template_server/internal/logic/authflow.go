@@ -627,7 +627,12 @@ func (s *authFlow) issueSession(tenant *model.AuthTenant, authUserID uint, provi
 	}
 
 	normalizedProfile := normalizeBusinessProfile(businessUser)
-	tokenPair, err := session.GenerateTokenPairWithProfile(
+	if err := s.svcCtx.AuthRepo.UpdateUserTokenUserID(s.ctx, authUserID, normalizedProfile.UserID); err != nil {
+		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+	}
+
+	tokenPair, err := session.GenerateTokenPairWithAuthUserProfile(
+		authUserID,
 		normalizedProfile.UserID,
 		normalizedProfile.DisplayName,
 		"",

@@ -1,4 +1,3 @@
-支持微信小程序手机号 code 换取登录手机号
+统一认证域用户资料到 auth_service
 
-为 phone provider 增加 phone_code 模式
-支持通过微信小程序 getPhoneNumber code 换取真实手机号后发放会话
+补齐 /auth/me 一致性、受信内部更新接口与业务用户持久映射，避免业务 server 继续本地管理共享资料。

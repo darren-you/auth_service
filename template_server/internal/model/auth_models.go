@@ -44,6 +44,7 @@ func (AuthProviderConfig) TableName() string {
 type AuthUser struct {
 	ID          uint       `gorm:"primaryKey" json:"id"`
 	TenantID    uint       `gorm:"index" json:"tenant_id"`
+	TokenUserID uint       `gorm:"column:token_user_id;uniqueIndex:idx_tenant_token_user,priority:2" json:"token_user_id"`
 	DisplayName string     `gorm:"column:display_name;size:191" json:"display_name"`
 	AvatarURL   string     `gorm:"column:avatar_url;type:text" json:"avatar_url"`
 	Role        string     `gorm:"size:32;default:user" json:"role"`

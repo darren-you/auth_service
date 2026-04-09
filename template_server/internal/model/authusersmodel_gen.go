@@ -36,15 +36,16 @@ type (
 	}
 
 	AuthUsers struct {
-		Id          uint64       `db:"id"`
-		TenantId    uint64       `db:"tenant_id"`
-		DisplayName string       `db:"display_name"`
-		AvatarUrl   string       `db:"avatar_url"`
-		Role        string       `db:"role"`
-		Status      string       `db:"status"`
-		LastLoginAt sql.NullTime `db:"last_login_at"`
-		CreatedAt   sql.NullTime `db:"created_at"`
-		UpdatedAt   sql.NullTime `db:"updated_at"`
+		Id          uint64        `db:"id"`
+		TenantId    uint64        `db:"tenant_id"`
+		TokenUserId sql.NullInt64 `db:"token_user_id"`
+		DisplayName string        `db:"display_name"`
+		AvatarUrl   string        `db:"avatar_url"`
+		Role        string        `db:"role"`
+		Status      string        `db:"status"`
+		LastLoginAt sql.NullTime  `db:"last_login_at"`
+		CreatedAt   sql.NullTime  `db:"created_at"`
+		UpdatedAt   sql.NullTime  `db:"updated_at"`
 	}
 )
 
@@ -76,14 +77,14 @@ func (m *defaultAuthUsersModel) FindOne(ctx context.Context, id uint64) (*AuthUs
 }
 
 func (m *defaultAuthUsersModel) Insert(ctx context.Context, data *AuthUsers) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?)", m.table, authUsersRowsExpectAutoSet)
-	ret, err := m.conn.ExecCtx(ctx, query, data.TenantId, data.DisplayName, data.AvatarUrl, data.Role, data.Status, data.LastLoginAt)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?)", m.table, authUsersRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.TenantId, data.TokenUserId, data.DisplayName, data.AvatarUrl, data.Role, data.Status, data.LastLoginAt)
 	return ret, err
 }
 
 func (m *defaultAuthUsersModel) Update(ctx context.Context, data *AuthUsers) error {
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, authUsersRowsWithPlaceHolder)
-	_, err := m.conn.ExecCtx(ctx, query, data.TenantId, data.DisplayName, data.AvatarUrl, data.Role, data.Status, data.LastLoginAt, data.Id)
+	_, err := m.conn.ExecCtx(ctx, query, data.TenantId, data.TokenUserId, data.DisplayName, data.AvatarUrl, data.Role, data.Status, data.LastLoginAt, data.Id)
 	return err
 }
 

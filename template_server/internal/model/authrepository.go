@@ -19,12 +19,16 @@ type AuthRepository interface {
 	FindTenantByID(ctx context.Context, tenantID uint) (*AuthTenant, error)
 	FindProviderConfig(ctx context.Context, tenantID uint, provider string, clientType string) (*AuthProviderConfig, error)
 	FindUserByIdentity(ctx context.Context, tenantID uint, provider string, subject string) (*AuthUser, *AuthIdentity, error)
+	FindUserByTokenUserID(ctx context.Context, tenantID uint, tokenUserID uint) (*AuthUser, error)
 	CreateUserWithIdentity(ctx context.Context, user *AuthUser, identity *AuthIdentity) error
 	UpdateUserLogin(ctx context.Context, userID uint, displayName string, avatarURL string, lastLoginAt time.Time) error
+	UpdateUserTokenUserID(ctx context.Context, userID uint, tokenUserID uint) error
+	UpdateUserProfileAndActiveSessions(ctx context.Context, userID uint, displayName string, avatarURL string, role string, status string) error
 	UpdateIdentity(ctx context.Context, identityID uint, clientType string, unionID string, profileJSON string) error
 	FindUserByID(ctx context.Context, userID uint) (*AuthUser, error)
 	CreateSession(ctx context.Context, authSession *AuthSession) error
 	FindSessionByHash(ctx context.Context, refreshTokenHash string) (*AuthSession, error)
+	FindLatestActiveSessionByTokenUserID(ctx context.Context, tenantID uint, tokenUserID uint) (*AuthSession, error)
 	RevokeSessionByHash(ctx context.Context, refreshTokenHash string, revokedAt time.Time) error
 }
 
@@ -73,6 +77,9 @@ func NewAuthRepository(conn sqlx.SqlConn) AuthRepository {
 
 func (r *authRepository) SyncCatalog(ctx context.Context, tenantConfigs []config.TenantConfig) error {
 	if err := r.ensureCoreTimestampSchema(ctx); err != nil {
+		return err
+	}
+	if err := r.ensureUserTokenIDSchema(ctx); err != nil {
 		return err
 	}
 	if err := r.migrateWeChatProviderKeys(ctx); err != nil {
@@ -483,6 +490,66 @@ func (r *authRepository) UpdateUserLogin(ctx context.Context, userID uint, displ
 	return err
 }
 
+func (r *authRepository) UpdateUserTokenUserID(ctx context.Context, userID uint, tokenUserID uint) error {
+	if userID == 0 || tokenUserID == 0 {
+		return nil
+	}
+	_, err := r.conn.ExecCtx(ctx,
+		"update auth_users set token_user_id = ?, updated_at = now() where id = ?",
+		tokenUserID,
+		userID,
+	)
+	return err
+}
+
+func (r *authRepository) UpdateUserProfileAndActiveSessions(
+	ctx context.Context,
+	userID uint,
+	displayName string,
+	avatarURL string,
+	role string,
+	status string,
+) error {
+	return r.conn.TransactCtx(ctx, func(ctx context.Context, session sqlx.Session) error {
+		txConn := sqlx.NewSqlConnFromSession(session)
+		if _, err := txConn.ExecCtx(ctx,
+			"update auth_users set display_name = ?, avatar_url = ?, role = ?, status = ?, updated_at = now() where id = ?",
+			strings.TrimSpace(displayName),
+			strings.TrimSpace(avatarURL),
+			strings.TrimSpace(role),
+			strings.TrimSpace(status),
+			userID,
+		); err != nil {
+			return err
+		}
+
+		_, err := txConn.ExecCtx(ctx, `
+			update auth_sessions
+			set metadata_json = json_set(
+				case
+					when metadata_json is null or trim(metadata_json) = '' then json_object()
+					else cast(metadata_json as json)
+				end,
+				'$.display_name', ?,
+				'$.avatar_url', ?,
+				'$.role', ?,
+				'$.status', ?
+			),
+			updated_at = now()
+			where auth_user_id = ?
+			  and revoked_at is null
+			  and expires_at > now()
+		`,
+			strings.TrimSpace(displayName),
+			strings.TrimSpace(avatarURL),
+			strings.TrimSpace(role),
+			strings.TrimSpace(status),
+			userID,
+		)
+		return err
+	})
+}
+
 func (r *authRepository) UpdateIdentity(ctx context.Context, identityID uint, clientType string, unionID string, profileJSON string) error {
 	_, err := r.conn.ExecCtx(ctx,
 		"update auth_identities set client_type = ?, union_id = ?, profile_json = ?, updated_at = now() where id = ?",
@@ -503,6 +570,23 @@ func (r *authRepository) FindUserByID(ctx context.Context, userID uint) (*AuthUs
 		return nil, err
 	}
 	return fromUserRecord(record), nil
+}
+
+func (r *authRepository) FindUserByTokenUserID(ctx context.Context, tenantID uint, tokenUserID uint) (*AuthUser, error) {
+	var record AuthUsers
+	err := r.conn.QueryRowCtx(ctx, &record, `
+		select id, tenant_id, token_user_id, display_name, avatar_url, role, status, last_login_at, created_at, updated_at
+		from auth_users
+		where tenant_id = ? and token_user_id = ?
+		limit 1
+	`, tenantID, tokenUserID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return fromUserRecord(&record), nil
 }
 
 func (r *authRepository) CreateSession(ctx context.Context, authSession *AuthSession) error {
@@ -527,6 +611,27 @@ func (r *authRepository) FindSessionByHash(ctx context.Context, refreshTokenHash
 		return nil, err
 	}
 	return fromSessionRecord(record), nil
+}
+
+func (r *authRepository) FindLatestActiveSessionByTokenUserID(ctx context.Context, tenantID uint, tokenUserID uint) (*AuthSession, error) {
+	var record AuthSessions
+	err := r.conn.QueryRowCtx(ctx, &record, `
+		select id, tenant_id, auth_user_id, provider, client_type, refresh_token_hash, expires_at, revoked_at, last_seen_at, metadata_json, created_at, updated_at
+		from auth_sessions
+		where tenant_id = ?
+		  and revoked_at is null
+		  and expires_at > now()
+		  and cast(json_unquote(json_extract(metadata_json, '$.token_user_id')) as unsigned) = ?
+		order by coalesce(last_seen_at, updated_at, created_at) desc, id desc
+		limit 1
+	`, tenantID, tokenUserID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) || errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return fromSessionRecord(&record), nil
 }
 
 func (r *authRepository) RevokeSessionByHash(ctx context.Context, refreshTokenHash string, revokedAt time.Time) error {
@@ -629,6 +734,7 @@ func fromUserRecord(record *AuthUsers) *AuthUser {
 	return &AuthUser{
 		ID:          uint(record.Id),
 		TenantID:    uint(record.TenantId),
+		TokenUserID: nullUint(record.TokenUserId),
 		DisplayName: record.DisplayName,
 		AvatarURL:   record.AvatarUrl,
 		Role:        record.Role,
@@ -653,11 +759,84 @@ func toUserRecord(record *AuthUser) *AuthUsers {
 	return &AuthUsers{
 		Id:          uint64(record.ID),
 		TenantId:    uint64(record.TenantID),
+		TokenUserId: uintToNullInt(record.TokenUserID),
 		DisplayName: strings.TrimSpace(record.DisplayName),
 		AvatarUrl:   strings.TrimSpace(record.AvatarURL),
 		Role:        strings.TrimSpace(record.Role),
 		Status:      strings.TrimSpace(record.Status),
 		LastLoginAt: lastLogin,
+	}
+}
+
+func (r *authRepository) ensureUserTokenIDSchema(ctx context.Context) error {
+	var columnCount int64
+	if err := r.conn.QueryRowCtx(ctx, &columnCount, `
+		select count(*)
+		from information_schema.columns
+		where table_schema = database()
+		  and table_name = 'auth_users'
+		  and column_name = 'token_user_id'
+	`); err != nil {
+		return err
+	}
+	if columnCount == 0 {
+		if _, err := r.conn.ExecCtx(ctx, `
+			alter table auth_users
+			add column token_user_id bigint unsigned null after tenant_id
+		`); err != nil {
+			return err
+		}
+	}
+
+	var indexCount int64
+	if err := r.conn.QueryRowCtx(ctx, &indexCount, `
+		select count(*)
+		from information_schema.statistics
+		where table_schema = database()
+		  and table_name = 'auth_users'
+		  and index_name = 'idx_auth_users_tenant_token_user'
+	`); err != nil {
+		return err
+	}
+	if indexCount == 0 {
+		if _, err := r.conn.ExecCtx(ctx, `
+			alter table auth_users
+			add unique key idx_auth_users_tenant_token_user (tenant_id, token_user_id)
+		`); err != nil {
+			return err
+		}
+	}
+
+	_, err := r.conn.ExecCtx(ctx, `
+		update auth_users u
+		join (
+			select auth_user_id, max(cast(json_unquote(json_extract(metadata_json, '$.token_user_id')) as unsigned)) as token_user_id
+			from auth_sessions
+			where json_extract(metadata_json, '$.token_user_id') is not null
+			group by auth_user_id
+		) s on s.auth_user_id = u.id
+		set u.token_user_id = s.token_user_id,
+			u.updated_at = now()
+		where u.token_user_id is null
+		  and s.token_user_id is not null
+	`)
+	return err
+}
+
+func nullUint(value sql.NullInt64) uint {
+	if !value.Valid || value.Int64 <= 0 {
+		return 0
+	}
+	return uint(value.Int64)
+}
+
+func uintToNullInt(value uint) sql.NullInt64 {
+	if value == 0 {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{
+		Int64: int64(value),
+		Valid: true,
 	}
 }
 
