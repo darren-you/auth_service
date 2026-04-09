@@ -30,6 +30,7 @@ type ProviderCallbackReq {
 	TenantKey         string `json:"tenant_key"`
 	ClientType        string `json:"client_type"`
 	Code              string `json:"code,optional"`
+	PhoneCode         string `json:"phone_code,optional"`
 	State             string `json:"state,optional"`
 	AuthorizationCode string `json:"authorization_code,optional"`
 	Username          string `json:"username,optional"`

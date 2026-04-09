@@ -1,6 +1,7 @@
 package wechatshared
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	stdErrors "errors"
@@ -64,6 +65,25 @@ type MiniProgramSession struct {
 	UnionID    string `json:"unionid"`
 	ErrCode    int    `json:"errcode"`
 	ErrMsg     string `json:"errmsg"`
+}
+
+type AccessTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	ErrCode     int    `json:"errcode"`
+	ErrMsg      string `json:"errmsg"`
+}
+
+type MiniProgramPhoneInfo struct {
+	PhoneNumber     string `json:"phoneNumber"`
+	PurePhoneNumber string `json:"purePhoneNumber"`
+	CountryCode     string `json:"countryCode"`
+}
+
+type MiniProgramPhoneNumberResponse struct {
+	PhoneInfo MiniProgramPhoneInfo `json:"phone_info"`
+	ErrCode   int                  `json:"errcode"`
+	ErrMsg    string               `json:"errmsg"`
 }
 
 type UserInfo struct {
@@ -179,6 +199,64 @@ func (r *Runtime) ExchangeMiniProgramCode(ctx context.Context, code string) (*Mi
 	return &resp, nil
 }
 
+func (r *Runtime) GetMiniProgramAccessToken(ctx context.Context) (*AccessTokenResponse, error) {
+	values := url.Values{}
+	values.Set("grant_type", "client_credential")
+	values.Set("appid", r.appID)
+	values.Set("secret", r.appSecret)
+
+	body, err := r.callAPI(ctx, "/cgi-bin/token", values)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp AccessTokenResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	if err := buildAPIError(resp.ErrCode, resp.ErrMsg); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(resp.AccessToken) == "" {
+		return nil, fmt.Errorf("invalid mini program access token response: missing access_token")
+	}
+	return &resp, nil
+}
+
+func (r *Runtime) GetMiniProgramPhoneNumber(ctx context.Context, code string) (*MiniProgramPhoneInfo, error) {
+	trimmedCode := strings.TrimSpace(code)
+	if trimmedCode == "" {
+		return nil, fmt.Errorf("wechat mini program phone code is required")
+	}
+
+	accessTokenResp, err := r.GetMiniProgramAccessToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	values := url.Values{}
+	values.Set("access_token", accessTokenResp.AccessToken)
+
+	body, err := r.callJSONAPI(ctx, http.MethodPost, "/wxa/business/getuserphonenumber", values, map[string]string{
+		"code": trimmedCode,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp MiniProgramPhoneNumberResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, err
+	}
+	if err := buildAPIError(resp.ErrCode, resp.ErrMsg); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(resp.PhoneInfo.PurePhoneNumber) == "" && strings.TrimSpace(resp.PhoneInfo.PhoneNumber) == "" {
+		return nil, fmt.Errorf("invalid mini program phone number response: missing phone number")
+	}
+	return &resp.PhoneInfo, nil
+}
+
 func (r *Runtime) RefreshAccessToken(ctx context.Context, refreshToken string) (*OAuthToken, error) {
 	values := url.Values{}
 	values.Set("appid", r.appID)
@@ -279,14 +357,30 @@ func buildAPIError(code int, message string) error {
 }
 
 func (r *Runtime) callAPI(ctx context.Context, path string, query url.Values) ([]byte, error) {
+	return r.callJSONAPI(ctx, http.MethodGet, path, query, nil)
+}
+
+func (r *Runtime) callJSONAPI(ctx context.Context, method string, path string, query url.Values, reqBody interface{}) ([]byte, error) {
 	endpoint := r.apiBaseURL + path
 	if len(query) > 0 {
 		endpoint += "?" + query.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	var bodyReader io.Reader
+	if reqBody != nil {
+		payload, err := json.Marshal(reqBody)
+		if err != nil {
+			return nil, err
+		}
+		bodyReader = bytes.NewReader(payload)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, endpoint, bodyReader)
 	if err != nil {
 		return nil, err
+	}
+	if reqBody != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 	observability.PropagateRequestID(req, ctx)
 

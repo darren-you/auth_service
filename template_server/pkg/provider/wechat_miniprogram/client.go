@@ -18,6 +18,7 @@ type Client struct {
 }
 
 type MiniProgramSession = wechatshared.MiniProgramSession
+type MiniProgramPhoneInfo = wechatshared.MiniProgramPhoneInfo
 type APIError = wechatshared.APIError
 
 func NewClient(cfg Config) *Client {
@@ -33,4 +34,8 @@ func NewClient(cfg Config) *Client {
 
 func (c *Client) ExchangeCode(ctx context.Context, code string) (*MiniProgramSession, error) {
 	return c.runtime.ExchangeMiniProgramCode(ctx, code)
+}
+
+func (c *Client) GetPhoneNumberByCode(ctx context.Context, code string) (*MiniProgramPhoneInfo, error) {
+	return c.runtime.GetMiniProgramPhoneNumber(ctx, code)
 }

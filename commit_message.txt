@@ -1,4 +1,4 @@
-支持业务侧已登录态绑定手机号时透传当前用户上下文
+支持微信小程序手机号 code 换取登录手机号
 
-- 手机验证码登录与一键登录链路补充 current_user_id / current_user_role 透传
-- 允许业务 bridge 将新手机号绑定到当前业务账号而不是新建业务用户
+为 phone provider 增加 phone_code 模式
+支持通过微信小程序 getPhoneNumber code 换取真实手机号后发放会话

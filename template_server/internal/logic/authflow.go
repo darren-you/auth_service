@@ -417,12 +417,22 @@ func (s *authFlow) loginWithPhone(req *ProviderCallbackRequest) (*SessionRespons
 		return nil, err
 	}
 
+	hasMiniProgramPhoneMode := strings.TrimSpace(req.PhoneCode) != ""
 	hasCaptchaMode := strings.TrimSpace(req.Phone) != "" || strings.TrimSpace(req.Captcha) != "" || strings.TrimSpace(req.CaptchaKey) != ""
 	hasOneClickMode := strings.TrimSpace(req.Token) != "" || strings.TrimSpace(req.Gyuid) != ""
-	if hasCaptchaMode == hasOneClickMode {
+	modeCount := 0
+	for _, enabled := range []bool{hasMiniProgramPhoneMode, hasCaptchaMode, hasOneClickMode} {
+		if enabled {
+			modeCount++
+		}
+	}
+	if modeCount != 1 {
 		return nil, appErrors.ErrBadRequest
 	}
 
+	if hasMiniProgramPhoneMode {
+		return s.loginWithPhoneMiniProgramCode(tenant, providerConfig, req)
+	}
 	if hasCaptchaMode {
 		return s.loginWithPhoneCaptcha(tenant, providerConfig, req)
 	}

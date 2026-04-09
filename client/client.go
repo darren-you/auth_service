@@ -46,6 +46,7 @@ type ProviderCallbackRequest struct {
 	TenantKey         string `json:"tenant_key"`
 	ClientType        string `json:"client_type"`
 	Code              string `json:"code,omitempty"`
+	PhoneCode         string `json:"phone_code,omitempty"`
 	State             string `json:"state,omitempty"`
 	AuthorizationCode string `json:"authorization_code,omitempty"`
 	Username          string `json:"username,omitempty"`
