@@ -90,17 +90,17 @@ auth:
           app_secret: "{{ secret `auth.tenants.tinytext.providers.wechat.app_secret` }}"
           redirect_uri: https://tinytext.xdarren.com/wechat/callback
           scope: snsapi_login
-    - key: yike
-      name: Yike
+    - key: elook
+      name: Elook
       enabled: true
-      bridge_base_url: http://yike_server_prod:8080
-      bridge_auth_key: "{{ secret `auth.tenants.yike.bridge_auth_key` }}"
+      bridge_base_url: http://elook_server_prod:8080
+      bridge_auth_key: "{{ secret `auth.tenants.elook.bridge_auth_key` }}"
       providers:
         - provider: wechat_miniprogram
           client_type: miniprogram
           enabled: true
           app_id: wx4b158c199ebc23c8
-          app_secret: "{{ secret `auth.tenants.yike.providers.wechat.app_secret` }}"
+          app_secret: "{{ secret `auth.tenants.elook.providers.wechat.app_secret` }}"
         - provider: password
           client_type: default
           enabled: true
@@ -110,7 +110,7 @@ auth:
           test_phone: "18912345678"
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
-          extra_json: "{{ secret `auth.tenants.yike.providers.phone.extra_json` }}"
+          extra_json: "{{ secret `auth.tenants.elook.providers.phone.extra_json` }}"
     - key: template_project
       name: Template Project
       enabled: true

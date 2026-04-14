@@ -13,9 +13,9 @@ func TestValidateAcceptsContainerNetworkBridgeBaseURL(t *testing.T) {
 		Auth: AuthConfig{
 			Tenants: []TenantConfig{
 				{
-					Key:           "yike",
-					Name:          "Yike",
-					BridgeBaseURL: "http://yike_server_prod:8080",
+					Key:           "elook",
+					Name:          "Elook",
+					BridgeBaseURL: "http://elook_server_prod:8080",
 				},
 			},
 		},
@@ -34,8 +34,8 @@ func TestValidateRejectsHostIPBridgeBaseURL(t *testing.T) {
 		Auth: AuthConfig{
 			Tenants: []TenantConfig{
 				{
-					Key:           "yike",
-					Name:          "Yike",
+					Key:           "elook",
+					Name:          "Elook",
 					BridgeBaseURL: "http://124.221.158.155:8098",
 				},
 			},

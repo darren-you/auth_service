@@ -9,8 +9,8 @@ import (
 func TestFromTenantRecordAllowsNullTimestamps(t *testing.T) {
 	record := &AuthTenants{
 		Id:        5,
-		TenantKey: "yike",
-		Name:      "Yike",
+		TenantKey: "elook",
+		Name:      "Elook",
 		Enabled:   1,
 		CreatedAt: sql.NullTime{},
 		UpdatedAt: sql.NullTime{},

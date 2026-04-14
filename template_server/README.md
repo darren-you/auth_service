@@ -91,7 +91,7 @@
 
 ```json
 {
-  "tenant_key": "yike",
+  "tenant_key": "elook",
   "provider": "wechat",
   "client_type": "miniprogram",
   "open_id": "wechat-open-id",
