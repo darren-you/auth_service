@@ -23,6 +23,8 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) (*ServiceContext, error) {
+	sqlx.DisableLog()
+
 	sqlDB, err := sql.Open("mysql", c.MySQL.DSN())
 	if err != nil {
 		return nil, err

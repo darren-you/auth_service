@@ -1,3 +1,3 @@
-统一认证域用户资料到 auth_service
+修正 elook 小程序认证配置与日志脱敏
 
-补齐 /auth/me 一致性、受信内部更新接口与业务用户持久映射，避免业务 server 继续本地管理共享资料。
+将 auth_service 中 elook 租户的小程序 appid 对齐当前 elook 小程序主体，并关闭 SQL 明文日志避免输出 provider secret。
