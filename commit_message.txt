@@ -1,3 +1,3 @@
-修正 elook 小程序认证配置与日志脱敏
+移除 deploy_shell 残留子模块指针
 
-将 auth_service 中 elook 租户的小程序 appid 对齐当前 elook 小程序主体，并关闭 SQL 明文日志避免输出 provider secret。
+删除已不在 .gitmodules 与仓库标准入口中的 deploy_shell gitlink，恢复递归 submodule 操作。
