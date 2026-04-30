@@ -1,3 +1,4 @@
-移除 deploy_shell 残留子模块指针
+同步 fast_deploy 子模块到 resume Web 版本
 
-删除已不在 .gitmodules 与仓库标准入口中的 deploy_shell gitlink，恢复递归 submodule 操作。
+将内嵌 fast_deploy 对齐到工作区根基准提交 69118c1，
+回收 resume Web Jenkins 工程引入后的部署底座漂移。
