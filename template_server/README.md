@@ -77,6 +77,7 @@
   - `client_type: miniprogram`
   - `app_id`
   - `app_secret`
+- 如果该项目需要统一默认头像，应在同一个租户配置中补齐 `default_avatar_url`；认证服务会在签发 session、刷新 token、`/auth/me` 和内部用户资料接口返回资料时按租户归一化头像
 
 ## 微信 provider 约定
 
@@ -111,6 +112,21 @@
 - 如果业务侧在“已登录态绑定手机号 / 绑定新登录方式”场景下调用 provider callback，应透传 `current_user_id / current_user_role`，业务 bridge 需要把该登录方式绑定到当前业务用户，而不是创建新的业务账号
 - 当业务侧允许用户修改共享资料字段（如昵称、头像）时，应同步调用 `PUT /api/v1/auth/me` 回写认证域，保证后续登录、刷新 token 和 `/auth/me` 的资料读写一致
 - 当业务侧管理后台需要修改其他用户的共享资料字段（如昵称、头像、角色、状态）时，应调用 `PUT /api/v1/auth/internal/users`，并使用租户配置中的 `bridge_auth_key` 作为受信鉴权，不再直接把这些字段只写在业务库里
+
+## 租户默认头像
+
+每个租户可在 `config/config.dev.yaml` 与 `config/config.prod.yaml` 中按项目配置默认头像：
+
+```yaml
+auth:
+  tenants:
+    - key: elook
+      default_avatar_url: https://files.xdarren.com/elook/images/defaults/avatar.jpg
+      legacy_default_avatar_urls:
+        - https://files.xdarren.com/elook/images/defaults/avatar.png
+```
+
+当认证域内头像为空，或等于该租户 `legacy_default_avatar_urls` 中的旧默认头像时，`auth_service` 会返回当前租户的 `default_avatar_url`。用户真正上传过的自定义头像保持原值，不会被默认头像覆盖。
 
 ## 部署
 

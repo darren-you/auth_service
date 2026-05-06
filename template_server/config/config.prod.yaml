@@ -93,6 +93,10 @@ auth:
     - key: elook
       name: Elook
       enabled: true
+      default_avatar_url: https://files.xdarren.com/elook/images/defaults/avatar.jpg
+      legacy_default_avatar_urls:
+        - https://files.xdarren.com/elook/images/defaults/avatar.png
+        - http://files.xdarren.com/images/bear.jpeg
       bridge_base_url: http://elook_server_prod:8080
       bridge_auth_key: "{{ secret `auth.tenants.elook.bridge_auth_key` }}"
       providers:

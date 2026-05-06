@@ -15,6 +15,7 @@ type currentAuthUserContext struct {
 	accessIdentity *middleware.AccessIdentity
 	authUser       *model.AuthUser
 	tenant         *model.AuthTenant
+	svcCtx         *svc.ServiceContext
 }
 
 func resolveCurrentAuthUserContext(ctx context.Context, svcCtx *svc.ServiceContext) (*currentAuthUserContext, error) {
@@ -64,11 +65,12 @@ func resolveCurrentAuthUserContext(ctx context.Context, svcCtx *svc.ServiceConte
 		accessIdentity: accessIdentity,
 		authUser:       user,
 		tenant:         tenant,
+		svcCtx:         svcCtx,
 	}, nil
 }
 
 func buildCurrentAuthUserResp(current *currentAuthUserContext) *types.AuthUserResp {
-	if current == nil || current.accessIdentity == nil || current.authUser == nil || current.tenant == nil {
+	if current == nil || current.accessIdentity == nil || current.authUser == nil || current.tenant == nil || current.svcCtx == nil {
 		return nil
 	}
 
@@ -81,7 +83,7 @@ func buildCurrentAuthUserResp(current *currentAuthUserContext) *types.AuthUserRe
 		Id:          uint64(current.accessIdentity.TokenUserID),
 		TenantKey:   current.tenant.TenantKey,
 		DisplayName: strings.TrimSpace(current.authUser.DisplayName),
-		AvatarURL:   strings.TrimSpace(current.authUser.AvatarURL),
+		AvatarURL:   resolveTenantAvatarURL(current.svcCtx.Config, current.tenant.TenantKey, current.authUser.AvatarURL),
 		Role:        strings.TrimSpace(current.authUser.Role),
 		Status:      strings.TrimSpace(current.authUser.Status),
 		LastLoginAt: lastLoginAt,

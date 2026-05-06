@@ -89,12 +89,14 @@ type AuthConfig struct {
 }
 
 type TenantConfig struct {
-	Key           string           `json:"key"`
-	Name          string           `json:"name"`
-	Enabled       bool             `json:"enabled"`
-	BridgeBaseURL string           `json:"bridge_base_url,optional"`
-	BridgeAuthKey string           `json:"bridge_auth_key,optional"`
-	Providers     []ProviderConfig `json:"providers,optional"`
+	Key                     string           `json:"key"`
+	Name                    string           `json:"name"`
+	Enabled                 bool             `json:"enabled"`
+	DefaultAvatarURL        string           `json:"default_avatar_url,optional"`
+	LegacyDefaultAvatarURLs []string         `json:"legacy_default_avatar_urls,optional"`
+	BridgeBaseURL           string           `json:"bridge_base_url,optional"`
+	BridgeAuthKey           string           `json:"bridge_auth_key,optional"`
+	Providers               []ProviderConfig `json:"providers,optional"`
 }
 
 type ProviderConfig struct {
@@ -156,6 +158,9 @@ func validateTenantConfigs(tenants []TenantConfig) error {
 		if err := validateTenantBridgeBaseURL(tenant); err != nil {
 			return err
 		}
+		if err := validateTenantAvatarURLs(tenant); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -207,6 +212,35 @@ func validateTenantBridgeBaseURL(tenant TenantConfig) error {
 	}
 
 	return nil
+}
+
+func validateTenantAvatarURLs(tenant TenantConfig) error {
+	if err := validateOptionalHTTPURL(tenant.DefaultAvatarURL); err != nil {
+		return fmt.Errorf("auth.tenants[%s].default_avatar_url is invalid: %s", tenant.Key, tenant.DefaultAvatarURL)
+	}
+	for _, avatarURL := range tenant.LegacyDefaultAvatarURLs {
+		if err := validateOptionalHTTPURL(avatarURL); err != nil {
+			return fmt.Errorf("auth.tenants[%s].legacy_default_avatar_urls contains invalid url: %s", tenant.Key, avatarURL)
+		}
+	}
+	return nil
+}
+
+func validateOptionalHTTPURL(value string) error {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	parsedURL, err := url.Parse(trimmed)
+	if err != nil || strings.TrimSpace(parsedURL.Scheme) == "" || strings.TrimSpace(parsedURL.Host) == "" {
+		return fmt.Errorf("invalid url")
+	}
+	switch strings.ToLower(strings.TrimSpace(parsedURL.Scheme)) {
+	case "http", "https":
+		return nil
+	default:
+		return fmt.Errorf("unsupported scheme")
+	}
 }
 
 func (c ServerConfig) RestConf(logConf logx.LogConf) rest.RestConf {
@@ -370,6 +404,10 @@ func normalizeConfig(cfg *Config) {
 		tenant := &cfg.Auth.Tenants[tenantIndex]
 		tenant.Key = normalizeKey(tenant.Key)
 		tenant.Name = strings.TrimSpace(tenant.Name)
+		tenant.DefaultAvatarURL = strings.TrimSpace(tenant.DefaultAvatarURL)
+		for avatarIndex := range tenant.LegacyDefaultAvatarURLs {
+			tenant.LegacyDefaultAvatarURLs[avatarIndex] = strings.TrimSpace(tenant.LegacyDefaultAvatarURLs[avatarIndex])
+		}
 		tenant.BridgeBaseURL = strings.TrimSpace(tenant.BridgeBaseURL)
 		tenant.BridgeAuthKey = strings.TrimSpace(tenant.BridgeAuthKey)
 		for providerIndex := range tenant.Providers {

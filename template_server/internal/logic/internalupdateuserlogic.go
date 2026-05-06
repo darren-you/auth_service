@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/darren-you/auth_service/template_server/internal/config"
 	appErrors "github.com/darren-you/auth_service/template_server/internal/errorx"
 	"github.com/darren-you/auth_service/template_server/internal/model"
 	"github.com/darren-you/auth_service/template_server/internal/svc"
@@ -74,7 +75,7 @@ func (l *InternalUpdateUserLogic) InternalUpdateUser(bridgeAuthKey string, req *
 		updatedAvatarURL == user.AvatarURL &&
 		updatedRole == user.Role &&
 		updatedStatus == user.Status {
-		return buildInternalAuthUserResp(tenant, user, uint(req.UserID)), nil
+		return buildInternalAuthUserResp(l.svcCtx.Config, tenant, user, uint(req.UserID)), nil
 	}
 
 	if err := l.svcCtx.AuthRepo.UpdateUserProfileAndActiveSessions(
@@ -93,7 +94,7 @@ func (l *InternalUpdateUserLogic) InternalUpdateUser(bridgeAuthKey string, req *
 	user.Role = updatedRole
 	user.Status = updatedStatus
 
-	return buildInternalAuthUserResp(tenant, user, uint(req.UserID)), nil
+	return buildInternalAuthUserResp(l.svcCtx.Config, tenant, user, uint(req.UserID)), nil
 }
 
 func (l *InternalUpdateUserLogic) resolveTenantAndRuntime(tenantKey string) (*model.AuthTenant, *tenantRuntimeConfig, error) {
@@ -117,7 +118,7 @@ func (l *InternalUpdateUserLogic) resolveTenantAndRuntime(tenantKey string) (*mo
 	return tenant, runtimeCfg, nil
 }
 
-func buildInternalAuthUserResp(tenant *model.AuthTenant, user *model.AuthUser, tokenUserID uint) *types.AuthUserResp {
+func buildInternalAuthUserResp(cfg config.Config, tenant *model.AuthTenant, user *model.AuthUser, tokenUserID uint) *types.AuthUserResp {
 	if tenant == nil || user == nil {
 		return nil
 	}
@@ -134,7 +135,7 @@ func buildInternalAuthUserResp(tenant *model.AuthTenant, user *model.AuthUser, t
 		Id:          uint64(tokenUserID),
 		TenantKey:   tenant.TenantKey,
 		DisplayName: strings.TrimSpace(user.DisplayName),
-		AvatarURL:   strings.TrimSpace(user.AvatarURL),
+		AvatarURL:   resolveTenantAvatarURL(cfg, tenant.TenantKey, user.AvatarURL),
 		Role:        strings.TrimSpace(user.Role),
 		Status:      strings.TrimSpace(user.Status),
 		LastLoginAt: lastLoginAt,

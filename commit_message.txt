@@ -1,4 +1,3 @@
-同步 fast_deploy 子模块到 resume Web 版本
+支持租户默认头像
 
-将内嵌 fast_deploy 对齐到工作区根基准提交 69118c1，
-回收 resume Web Jenkins 工程引入后的部署底座漂移。
+为 auth_service 增加租户级 default_avatar_url 与 legacy_default_avatar_urls 配置，并在 session、token 刷新和 /auth/me 返回中按项目归一化默认头像。

@@ -336,7 +336,7 @@ func (s *authFlow) GetUserProfileByID(userID uint) (*AuthUserResponse, error) {
 		return nil, appErrors.ErrTenantNotFound
 	}
 
-	profile := buildUserResponse(user, tenant)
+	profile := s.buildUserResponse(user, tenant)
 	return &profile, nil
 }
 
@@ -626,7 +626,7 @@ func (s *authFlow) issueSession(tenant *model.AuthTenant, authUserID uint, provi
 		return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "business bridge user is empty", nil)
 	}
 
-	normalizedProfile := normalizeBusinessProfile(businessUser)
+	normalizedProfile := s.normalizeBusinessProfile(tenant.TenantKey, businessUser)
 	if err := s.svcCtx.AuthRepo.UpdateUserTokenUserID(s.ctx, authUserID, normalizedProfile.UserID); err != nil {
 		return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 	}
@@ -770,7 +770,7 @@ func (s *authFlow) syncBusinessUser(tenantKey string, provider string, clientTyp
 		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, msg, nil)
 	}
 
-	profile := normalizeBusinessProfile(&envelope.Data)
+	profile := s.normalizeBusinessProfile(tenantKey, &envelope.Data)
 	if profile.UserID == 0 {
 		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "business bridge returned empty user_id", nil)
 	}
@@ -803,7 +803,7 @@ func (s *authFlow) guestDevicePrefix(tenantKey string, clientType string) string
 	return fmt.Sprintf("auth:guest:%s:%s", normalize(tenantKey), normalize(clientType))
 }
 
-func buildUserResponse(user *model.AuthUser, tenant *model.AuthTenant) AuthUserResponse {
+func (s *authFlow) buildUserResponse(user *model.AuthUser, tenant *model.AuthTenant) AuthUserResponse {
 	var lastLoginAt int64
 	if user.LastLoginAt != nil {
 		lastLoginAt = user.LastLoginAt.UnixMilli()
@@ -813,7 +813,7 @@ func buildUserResponse(user *model.AuthUser, tenant *model.AuthTenant) AuthUserR
 		Id:          uint64(user.ID),
 		TenantKey:   tenant.TenantKey,
 		DisplayName: user.DisplayName,
-		AvatarURL:   user.AvatarURL,
+		AvatarURL:   resolveTenantAvatarURL(s.svcCtx.Config, tenant.TenantKey, user.AvatarURL),
 		Role:        user.Role,
 		Status:      user.Status,
 		LastLoginAt: lastLoginAt,
@@ -875,13 +875,13 @@ func parseSessionMetadata(raw string) (*sessionMetadata, error) {
 	return metadata, nil
 }
 
-func normalizeBusinessProfile(profile *businessUserProfile) *businessUserProfile {
+func (s *authFlow) normalizeBusinessProfile(tenantKey string, profile *businessUserProfile) *businessUserProfile {
 	if profile == nil {
 		return &businessUserProfile{}
 	}
 	normalized := *profile
 	normalized.DisplayName = firstNonEmpty(profile.DisplayName, fmt.Sprintf("用户_%d", profile.UserID))
-	normalized.AvatarURL = strings.TrimSpace(profile.AvatarURL)
+	normalized.AvatarURL = resolveTenantAvatarURL(s.svcCtx.Config, tenantKey, profile.AvatarURL)
 	normalized.Role = firstNonEmpty(profile.Role, "user")
 	normalized.Status = firstNonEmpty(profile.Status, "active")
 	return &normalized

@@ -50,3 +50,52 @@ func TestValidateRejectsHostIPBridgeBaseURL(t *testing.T) {
 		t.Fatalf("expected bridge_base_url validation error, got %v", err)
 	}
 }
+
+func TestValidateAcceptsTenantDefaultAvatarURL(t *testing.T) {
+	cfg := Config{
+		JWT: JWTConfig{
+			Secret: "test-secret",
+		},
+		Auth: AuthConfig{
+			Tenants: []TenantConfig{
+				{
+					Key:              "elook",
+					Name:             "Elook",
+					DefaultAvatarURL: "https://files.xdarren.com/elook/images/defaults/avatar.jpg",
+					LegacyDefaultAvatarURLs: []string{
+						"https://files.xdarren.com/elook/images/defaults/avatar.png",
+					},
+				},
+			},
+		},
+	}
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected default avatar urls to pass validation, got %v", err)
+	}
+}
+
+func TestValidateRejectsInvalidTenantDefaultAvatarURL(t *testing.T) {
+	cfg := Config{
+		JWT: JWTConfig{
+			Secret: "test-secret",
+		},
+		Auth: AuthConfig{
+			Tenants: []TenantConfig{
+				{
+					Key:              "elook",
+					Name:             "Elook",
+					DefaultAvatarURL: "files.xdarren.com/elook/images/defaults/avatar.jpg",
+				},
+			},
+		},
+	}
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatalf("expected invalid default_avatar_url to fail validation")
+	}
+	if !strings.Contains(err.Error(), "default_avatar_url") {
+		t.Fatalf("expected default_avatar_url validation error, got %v", err)
+	}
+}
