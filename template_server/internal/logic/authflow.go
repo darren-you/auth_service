@@ -1021,9 +1021,10 @@ func (s *authFlow) issuePhoneSession(
 	profile map[string]string,
 ) (*SessionResponse, error) {
 	displayName = firstNonEmpty(displayName, maskPhone(phone))
-	user, err := s.upsertIdentityUser(tenant, providerConfig, "phone", phone, "", displayName, avatarURL, "user", marshalJSON(profile))
-	if err != nil {
-		return nil, err
+	if currentUserID != 0 {
+		if err := s.ensurePhoneIdentityCanBindToTokenUser(tenant.ID, phone, currentUserID); err != nil {
+			return nil, err
+		}
 	}
 	businessUser, err := s.syncBusinessUser(tenant.TenantKey, "phone", providerConfig.ClientType, businessBridgeRequest{
 		Phone:           phone,
@@ -1035,7 +1036,150 @@ func (s *authFlow) issuePhoneSession(
 	if err != nil {
 		return nil, err
 	}
+	user, err := s.upsertPhoneIdentityUser(
+		tenant,
+		providerConfig,
+		phone,
+		displayName,
+		avatarURL,
+		businessUser.UserID,
+		marshalJSON(profile),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return s.issueSession(tenant, user.ID, "phone", providerConfig.ClientType, businessUser)
+}
+
+func (s *authFlow) ensurePhoneIdentityCanBindToTokenUser(tenantID uint, phone string, tokenUserID uint) error {
+	identityOwner, _, err := s.svcCtx.AuthRepo.FindUserByIdentity(s.ctx, tenantID, "phone", phone)
+	if err != nil {
+		return appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("find phone auth identity failed: %w", err),
+		)
+	}
+	if identityOwner != nil && identityOwner.TokenUserID != 0 && identityOwner.TokenUserID != tokenUserID {
+		return appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "phone already bound to another account", nil)
+	}
+	return nil
+}
+
+func (s *authFlow) upsertPhoneIdentityUser(
+	tenant *model.AuthTenant,
+	providerConfig *model.AuthProviderConfig,
+	phone string,
+	displayName string,
+	avatarURL string,
+	tokenUserID uint,
+	profileJSON string,
+) (*model.AuthUser, error) {
+	if tokenUserID == 0 {
+		return s.upsertIdentityUser(tenant, providerConfig, "phone", phone, "", displayName, avatarURL, "user", profileJSON)
+	}
+
+	identityOwner, identity, err := s.svcCtx.AuthRepo.FindUserByIdentity(s.ctx, tenant.ID, "phone", phone)
+	if err != nil {
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("find phone auth identity failed: %w", err),
+		)
+	}
+
+	user, err := s.svcCtx.AuthRepo.FindUserByTokenUserID(s.ctx, tenant.ID, tokenUserID)
+	if err != nil {
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("find auth user by token user id failed: %w", err),
+		)
+	}
+
+	now := time.Now()
+	if user == nil {
+		if identityOwner != nil {
+			if identityOwner.TokenUserID != 0 && identityOwner.TokenUserID != tokenUserID {
+				return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "phone already bound to another account", nil)
+			}
+			if err := s.svcCtx.AuthRepo.UpdateUserTokenUserID(s.ctx, identityOwner.ID, tokenUserID); err != nil {
+				return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+			}
+			identityOwner.TokenUserID = tokenUserID
+			user = identityOwner
+		} else {
+			user = &model.AuthUser{
+				TenantID:    tenant.ID,
+				TokenUserID: tokenUserID,
+				DisplayName: firstNonEmpty(displayName, defaultDisplayName("phone", phone)),
+				AvatarURL:   strings.TrimSpace(avatarURL),
+				Role:        "user",
+				Status:      "active",
+				LastLoginAt: &now,
+			}
+			identity = &model.AuthIdentity{
+				TenantID:        tenant.ID,
+				Provider:        "phone",
+				ClientType:      providerConfig.ClientType,
+				ProviderSubject: phone,
+				ProfileJSON:     profileJSON,
+			}
+			if err := s.svcCtx.AuthRepo.CreateUserWithIdentity(s.ctx, user, identity); err != nil {
+				return nil, appErrors.New(
+					appErrors.ErrInternalServer.Code,
+					appErrors.ErrInternalServer.HTTPStatus,
+					appErrors.ErrInternalServer.Message,
+					fmt.Errorf("create phone auth user with identity failed: %w", err),
+				)
+			}
+			return user, nil
+		}
+	}
+
+	if identityOwner != nil && identityOwner.ID != user.ID {
+		if identityOwner.TokenUserID != 0 && identityOwner.TokenUserID != tokenUserID {
+			return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "phone already bound to another account", nil)
+		}
+	} else if identity == nil {
+		identity = &model.AuthIdentity{
+			TenantID:        tenant.ID,
+			Provider:        "phone",
+			ProviderSubject: phone,
+		}
+	}
+
+	if identity != nil {
+		identity.ClientType = providerConfig.ClientType
+		identity.UnionID = ""
+		identity.ProfileJSON = profileJSON
+		if err := s.svcCtx.AuthRepo.UpsertIdentityForUser(s.ctx, user, identity); err != nil {
+			return nil, appErrors.New(
+				appErrors.ErrInternalServer.Code,
+				appErrors.ErrInternalServer.HTTPStatus,
+				appErrors.ErrInternalServer.Message,
+				fmt.Errorf("upsert phone auth identity failed: %w", err),
+			)
+		}
+	}
+
+	if err := s.svcCtx.AuthRepo.UpdateUserLogin(s.ctx, user.ID, displayName, avatarURL, now); err != nil {
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("update phone auth user login failed: %w", err),
+		)
+	}
+	user.DisplayName = firstNonEmpty(displayName, user.DisplayName)
+	if strings.TrimSpace(avatarURL) != "" {
+		user.AvatarURL = strings.TrimSpace(avatarURL)
+	}
+	user.LastLoginAt = &now
+	return user, nil
 }
 
 func (s *authFlow) newPhoneService(tenantKey string, providerConfig *model.AuthProviderConfig, sender authphone.Sender) *authphone.Service {

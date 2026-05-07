@@ -21,6 +21,7 @@ type AuthRepository interface {
 	FindUserByIdentity(ctx context.Context, tenantID uint, provider string, subject string) (*AuthUser, *AuthIdentity, error)
 	FindUserByTokenUserID(ctx context.Context, tenantID uint, tokenUserID uint) (*AuthUser, error)
 	CreateUserWithIdentity(ctx context.Context, user *AuthUser, identity *AuthIdentity) error
+	UpsertIdentityForUser(ctx context.Context, user *AuthUser, identity *AuthIdentity) error
 	UpdateUserLogin(ctx context.Context, userID uint, displayName string, avatarURL string, lastLoginAt time.Time) error
 	UpdateUserTokenUserID(ctx context.Context, userID uint, tokenUserID uint) error
 	UpdateUserProfileAndActiveSessions(ctx context.Context, userID uint, displayName string, avatarURL string, role string, status string) error
@@ -477,6 +478,44 @@ func (r *authRepository) CreateUserWithIdentity(ctx context.Context, user *AuthU
 
 		return nil
 	})
+}
+
+func (r *authRepository) UpsertIdentityForUser(ctx context.Context, user *AuthUser, identity *AuthIdentity) error {
+	if user == nil || user.ID == 0 || identity == nil {
+		return nil
+	}
+
+	identity.AuthUserID = user.ID
+	identity.TenantID = user.TenantID
+	if identity.ID == 0 {
+		ret, err := r.identities.Insert(ctx, toIdentityRecord(identity))
+		if err != nil {
+			return err
+		}
+		identityID, err := ret.LastInsertId()
+		if err != nil {
+			return err
+		}
+		identity.ID = uint(identityID)
+		return nil
+	}
+
+	_, err := r.conn.ExecCtx(ctx, `
+		update auth_identities
+		set auth_user_id = ?,
+			client_type = ?,
+			union_id = ?,
+			profile_json = ?,
+			updated_at = now()
+		where id = ?
+	`,
+		user.ID,
+		normalizeRecordKey(identity.ClientType),
+		strings.TrimSpace(identity.UnionID),
+		identity.ProfileJSON,
+		identity.ID,
+	)
+	return err
 }
 
 func (r *authRepository) UpdateUserLogin(ctx context.Context, userID uint, displayName string, avatarURL string, lastLoginAt time.Time) error {

@@ -48,6 +48,10 @@ func (s *authRepoStub) CreateUserWithIdentity(context.Context, *model.AuthUser, 
 	panic("unexpected call to CreateUserWithIdentity")
 }
 
+func (s *authRepoStub) UpsertIdentityForUser(context.Context, *model.AuthUser, *model.AuthIdentity) error {
+	panic("unexpected call to UpsertIdentityForUser")
+}
+
 func (s *authRepoStub) UpdateUserLogin(context.Context, uint, string, string, time.Time) error {
 	panic("unexpected call to UpdateUserLogin")
 }
@@ -116,6 +120,56 @@ func (s *kvStoreStub) Exists(context.Context, string) (bool, error) {
 
 var _ store.KVStore = (*kvStoreStub)(nil)
 
+type phoneIdentityAuthRepoStub struct {
+	authRepoStub
+	identityOwner      *model.AuthUser
+	identity           *model.AuthIdentity
+	userByToken        *model.AuthUser
+	createdUser        *model.AuthUser
+	createdIdentity    *model.AuthIdentity
+	upsertedUserID     uint
+	upsertedIdentity   *model.AuthIdentity
+	updatedLoginUserID uint
+	updatedTokenUserID uint
+	updatedTokenAuthID uint
+}
+
+func (s *phoneIdentityAuthRepoStub) FindUserByIdentity(context.Context, uint, string, string) (*model.AuthUser, *model.AuthIdentity, error) {
+	return s.identityOwner, s.identity, nil
+}
+
+func (s *phoneIdentityAuthRepoStub) FindUserByTokenUserID(context.Context, uint, uint) (*model.AuthUser, error) {
+	return s.userByToken, nil
+}
+
+func (s *phoneIdentityAuthRepoStub) CreateUserWithIdentity(_ context.Context, user *model.AuthUser, identity *model.AuthIdentity) error {
+	user.ID = 30
+	identity.ID = 40
+	identity.AuthUserID = user.ID
+	s.createdUser = user
+	s.createdIdentity = identity
+	return nil
+}
+
+func (s *phoneIdentityAuthRepoStub) UpsertIdentityForUser(_ context.Context, user *model.AuthUser, identity *model.AuthIdentity) error {
+	s.upsertedUserID = user.ID
+	copied := *identity
+	copied.AuthUserID = user.ID
+	s.upsertedIdentity = &copied
+	return nil
+}
+
+func (s *phoneIdentityAuthRepoStub) UpdateUserLogin(_ context.Context, userID uint, _ string, _ string, _ time.Time) error {
+	s.updatedLoginUserID = userID
+	return nil
+}
+
+func (s *phoneIdentityAuthRepoStub) UpdateUserTokenUserID(_ context.Context, authUserID uint, tokenUserID uint) error {
+	s.updatedTokenAuthID = authUserID
+	s.updatedTokenUserID = tokenUserID
+	return nil
+}
+
 func TestGetLoginURLForMiniProgramDoesNotAllocateState(t *testing.T) {
 	t.Parallel()
 
@@ -155,6 +209,92 @@ func TestGetLoginURLForMiniProgramDoesNotAllocateState(t *testing.T) {
 	}
 	if kv.setIfAbsentCalls != 0 {
 		t.Fatalf("expected no state allocation, got %d calls", kv.setIfAbsentCalls)
+	}
+}
+
+func TestUpsertPhoneIdentityUserBindsIdentityToExistingTokenUser(t *testing.T) {
+	t.Parallel()
+
+	repo := &phoneIdentityAuthRepoStub{
+		identityOwner: &model.AuthUser{ID: 20, TenantID: 7},
+		identity:      &model.AuthIdentity{ID: 21, TenantID: 7, AuthUserID: 20, Provider: "phone", ProviderSubject: "17608265580"},
+		userByToken:   &model.AuthUser{ID: 10, TenantID: 7, TokenUserID: 8, DisplayName: "微信用户"},
+	}
+	authFlow := newAuthFlow(context.Background(), &svc.ServiceContext{AuthRepo: repo})
+
+	user, err := authFlow.upsertPhoneIdentityUser(
+		&model.AuthTenant{ID: 7, TenantKey: "elook"},
+		&model.AuthProviderConfig{ClientType: providerkeys.ClientTypeMiniProgram},
+		"17608265580",
+		"微信用户",
+		"https://example.com/avatar.jpg",
+		8,
+		`{"phone":"17608265580"}`,
+	)
+	if err != nil {
+		t.Fatalf("upsertPhoneIdentityUser returned error: %v", err)
+	}
+	if user.ID != 10 {
+		t.Fatalf("expected existing token auth user 10, got %d", user.ID)
+	}
+	if repo.upsertedUserID != 10 {
+		t.Fatalf("expected identity to be upserted for auth user 10, got %d", repo.upsertedUserID)
+	}
+	if repo.upsertedIdentity == nil || repo.upsertedIdentity.ID != 21 || repo.upsertedIdentity.AuthUserID != 10 {
+		t.Fatalf("expected existing phone identity to move to auth user 10, got %#v", repo.upsertedIdentity)
+	}
+	if repo.updatedTokenAuthID != 0 || repo.updatedTokenUserID != 0 {
+		t.Fatalf("did not expect token user id update, got auth=%d token=%d", repo.updatedTokenAuthID, repo.updatedTokenUserID)
+	}
+}
+
+func TestUpsertPhoneIdentityUserRejectsIdentityBoundToAnotherTokenUser(t *testing.T) {
+	t.Parallel()
+
+	repo := &phoneIdentityAuthRepoStub{
+		identityOwner: &model.AuthUser{ID: 20, TenantID: 7, TokenUserID: 9},
+		identity:      &model.AuthIdentity{ID: 21, TenantID: 7, AuthUserID: 20, Provider: "phone", ProviderSubject: "17608265580"},
+		userByToken:   &model.AuthUser{ID: 10, TenantID: 7, TokenUserID: 8, DisplayName: "微信用户"},
+	}
+	authFlow := newAuthFlow(context.Background(), &svc.ServiceContext{AuthRepo: repo})
+
+	_, err := authFlow.upsertPhoneIdentityUser(
+		&model.AuthTenant{ID: 7, TenantKey: "elook"},
+		&model.AuthProviderConfig{ClientType: providerkeys.ClientTypeMiniProgram},
+		"17608265580",
+		"微信用户",
+		"",
+		8,
+		`{"phone":"17608265580"}`,
+	)
+	if err == nil || !strings.Contains(err.Error(), "phone already bound to another account") {
+		t.Fatalf("expected phone already bound error, got %v", err)
+	}
+}
+
+func TestUpsertPhoneIdentityUserCreatesTokenMappedUserWhenMissing(t *testing.T) {
+	t.Parallel()
+
+	repo := &phoneIdentityAuthRepoStub{}
+	authFlow := newAuthFlow(context.Background(), &svc.ServiceContext{AuthRepo: repo})
+
+	user, err := authFlow.upsertPhoneIdentityUser(
+		&model.AuthTenant{ID: 7, TenantKey: "elook"},
+		&model.AuthProviderConfig{ClientType: providerkeys.ClientTypeMiniProgram},
+		"17608265580",
+		"微信用户",
+		"",
+		8,
+		`{"phone":"17608265580"}`,
+	)
+	if err != nil {
+		t.Fatalf("upsertPhoneIdentityUser returned error: %v", err)
+	}
+	if user.ID != 30 || repo.createdUser == nil || repo.createdUser.TokenUserID != 8 {
+		t.Fatalf("expected created token-mapped user, got user=%#v created=%#v", user, repo.createdUser)
+	}
+	if repo.createdIdentity == nil || repo.createdIdentity.AuthUserID != 30 || repo.createdIdentity.ProviderSubject != "17608265580" {
+		t.Fatalf("expected created phone identity, got %#v", repo.createdIdentity)
 	}
 }
 
