@@ -6,7 +6,7 @@
 # =========================================
 PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_NAME="auth_service_server"
-DEPLOY_SERVER_PROFILE="host_124_221_158_155"
+DEPLOY_SERVER_PROFILE="host_106_53_135_42"
 
 # =========================================
 # 共享部署默认值

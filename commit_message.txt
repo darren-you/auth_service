@@ -1,3 +1,3 @@
-同步 fast_deploy 简化 SSH 发布链路
+移除生产模板租户配置
 
-更新 fast_deploy 子模块，发布链路默认使用稳定私钥和 known_hosts。
+切换部署 profile 和 fast_deploy 子模块到当前线上入口，并删除生产环境 template_project 租户。

@@ -115,15 +115,6 @@ auth:
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
           extra_json: "{{ secret `auth.tenants.elook.providers.phone.extra_json` }}"
-    - key: template_project
-      name: Template Project
-      enabled: true
-      bridge_base_url: http://template_server_prod:8080
-      bridge_auth_key: "{{ secret `auth.tenants.template_project.bridge_auth_key` }}"
-      providers:
-        - provider: password
-          client_type: default
-          enabled: true
     - key: imagen
       name: Imagen
       enabled: true
