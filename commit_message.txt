@@ -1,3 +1,3 @@
-同步 fast_deploy 到当前主线
+同步 WeChatAgent 通知链路
 
-更新 fast_deploy 子模块到当前 master，保留当前线上入口 profile 并同步通知链路。
+更新 fast_deploy 子模块到当前主线，使 CICD 构建/部署通知统一通过 Android WeChatAgent 发送到 commit 验证群。
