@@ -1,3 +1,3 @@
-同步 fast_deploy 发布链路修复
+同步 fast_deploy 构建通知国旗版本
 
-更新 fast_deploy 子模块到包含海外 Web Firebase 参数、server_sg 发布稳定性和 secret 权限修复的版本。
+更新 fast_deploy 子模块指针到包含构建通知区域国旗文案的提交。
