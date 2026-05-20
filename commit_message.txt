@@ -1,3 +1,3 @@
-接入 Firebase Authentication Provider
+同步 fast_deploy 发布链路修复
 
-新增 firebase_auth Provider，支持校验 Firebase ID token 并通过统一认证域同步业务用户后签发业务 token。
+更新 fast_deploy 子模块到包含海外 Web Firebase 参数、server_sg 发布稳定性和 secret 权限修复的版本。
