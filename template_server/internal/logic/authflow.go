@@ -75,7 +75,9 @@ type businessBridgeRequest struct {
 	UnionID         string `json:"union_id,omitempty"`
 	SessionKey      string `json:"session_key,omitempty"`
 	AppleUserID     string `json:"apple_user_id,omitempty"`
+	ProviderSubject string `json:"provider_subject,omitempty"`
 	Phone           string `json:"phone,omitempty"`
+	EmailVerified   bool   `json:"email_verified,omitempty"`
 	DeviceID        string `json:"device_id,omitempty"`
 	DisplayName     string `json:"display_name,omitempty"`
 	AvatarURL       string `json:"avatar_url,omitempty"`
@@ -170,6 +172,8 @@ func (s *authFlow) ProviderCallback(req *ProviderCallbackRequest) (*SessionRespo
 		return s.loginWithWeChatMiniProgram(req)
 	case providerkeys.ProviderApple:
 		return s.loginWithApple(req)
+	case providerkeys.ProviderFirebaseAuth:
+		return s.loginWithFirebaseAuth(req)
 	case providerkeys.ProviderPassword:
 		return s.loginWithPassword(req)
 	case providerkeys.ProviderPhone:
@@ -839,6 +843,8 @@ func defaultDisplayName(provider string, subject string) string {
 		return "微信用户_" + suffix
 	case providerkeys.ProviderApple:
 		return "Apple用户_" + suffix
+	case providerkeys.ProviderFirebaseAuth:
+		return "Firebase用户_" + suffix
 	case providerkeys.ProviderPhone:
 		return "手机用户_" + suffix
 	case providerkeys.ProviderGuest:

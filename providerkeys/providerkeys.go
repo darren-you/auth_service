@@ -7,6 +7,7 @@ const (
 	ProviderWeChatWeb         = "wechat_web"
 	ProviderWeChatMiniProgram = "wechat_miniprogram"
 	ProviderApple             = "apple"
+	ProviderFirebaseAuth      = "firebase_auth"
 	ProviderPassword          = "password"
 	ProviderPhone             = "phone"
 	ProviderGuest             = "guest"

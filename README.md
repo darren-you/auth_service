@@ -55,6 +55,12 @@
 - `wechat_web` 对应 Web 扫码登录
 - `wechat_miniprogram` 对应微信小程序登录
 
+Firebase provider 约定：
+
+- `firebase_auth` 对应 Firebase Authentication 登录
+- 客户端通过 Firebase SDK 获取 ID token，业务 server 转发给 `auth_service`
+- `auth_service` 验证 ID token 后通过业务 bridge 传递 `provider=firebase` 与 `provider_subject=<firebase uid>`，再签发现有业务 `accessToken` / `refreshToken`
+
 ## 接入原则
 
 1. 业务工程统一接入远程 `auth_service` 协议，不再各自维护本地登录内核。

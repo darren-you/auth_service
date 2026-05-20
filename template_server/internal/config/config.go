@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
@@ -169,6 +170,16 @@ func validateTenantConfigs(tenants []TenantConfig) error {
 func validateTenantProviderConfigs(tenant TenantConfig) error {
 	for _, provider := range tenant.Providers {
 		normalizedProvider := providerkeys.NormalizeProvider(provider.Provider)
+		if normalizedProvider == providerkeys.ProviderFirebaseAuth {
+			if providerkeys.NormalizeClientType(provider.ClientType) == "" {
+				return fmt.Errorf("auth provider %s requires client_type", provider.Provider)
+			}
+			if strings.TrimSpace(provider.ClientID) == "" && firebaseProjectIDFromExtraJSON(provider.ExtraJSON) == "" {
+				return fmt.Errorf("auth provider %s requires client_id or extra_json.project_id", provider.Provider)
+			}
+			continue
+		}
+
 		if !providerkeys.IsWeChatProvider(normalizedProvider) {
 			continue
 		}
@@ -183,6 +194,19 @@ func validateTenantProviderConfigs(tenant TenantConfig) error {
 	}
 
 	return nil
+}
+
+func firebaseProjectIDFromExtraJSON(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	var cfg struct {
+		ProjectID string `json:"project_id"`
+	}
+	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(cfg.ProjectID)
 }
 
 func validateTenantBridgeBaseURL(tenant TenantConfig) error {

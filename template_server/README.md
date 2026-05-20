@@ -26,6 +26,11 @@
   - Web：provider 使用 `wechat_web`，`login-url` 返回 OAuth 地址
   - App：provider 使用 `wechat_app`，`login-url` 只预取一次性 `state`
   - 小程序：provider 使用 `wechat_miniprogram`，前端调用 `wx.login` 获取 `code` 后，直接调用 `POST /api/v1/auth/providers/wechat_miniprogram/callback`
+- Firebase Authentication 登录
+  - provider 使用 `firebase_auth`
+  - 客户端先通过 Firebase SDK 完成 Google 登录并取得 Firebase ID token
+  - 业务 server 将 ID token 转发到 `POST /api/v1/auth/providers/firebase_auth/callback`
+  - `auth_service` 按租户配置的 Firebase `project_id` 校验 ID token 后，同步业务用户并签发统一业务 token
 - Apple 登录
 - 手机验证码登录
 - 手机验证码登录与已登录态绑定当前业务账号
@@ -85,6 +90,13 @@
 - Web 登录：`provider=wechat_web`，`client_type=web`
 - 小程序登录：`provider=wechat_miniprogram`，`client_type=miniprogram`
 - 业务 bridge 仍接收 `provider=wechat`，作为微信用户同步的统一业务语义，不和认证侧 provider 拆分耦合
+
+## Firebase provider 约定
+
+- 认证侧 provider 固定使用 `firebase_auth`
+- 租户 Provider 配置必须提供 Firebase `project_id`，当前放在 `client_id`；也可通过 `extra_json.project_id` 提供
+- 业务 bridge 接收 `provider=firebase` 与 `provider_subject=<firebase uid>`，不要把 Firebase UID 写入微信 OpenID 字段
+- Firebase 在架构上只作为统一认证域的 Provider，业务项目不直接校验 Firebase 登录态，也不直接签发业务 token
 
 ## 业务 bridge 对接约定
 

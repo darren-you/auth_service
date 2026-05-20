@@ -98,6 +98,7 @@ type ProviderCallbackReq struct {
 	AuthorizationCode string `json:"authorization_code,optional"`
 	Username          string `json:"username,optional"`
 	Email             string `json:"email,optional"`
+	EmailVerified     bool   `json:"email_verified,optional"`
 	Password          string `json:"password,optional"`
 	Phone             string `json:"phone,optional"`
 	Captcha           string `json:"captcha,optional"`
