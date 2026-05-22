@@ -1,3 +1,3 @@
-同步 fast_deploy 构建通知国旗版本
+切换 elook 小程序认证主体配置
 
-更新 fast_deploy 子模块指针到包含构建通知区域国旗文案的提交。
+将 auth_service 中 elook 租户的微信小程序 provider AppID 切换到 WeMini 小程序，AppSecret 继续通过 secret_base 注入。
