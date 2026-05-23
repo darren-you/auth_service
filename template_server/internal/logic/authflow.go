@@ -756,10 +756,7 @@ func (s *authFlow) bindProviderIdentityToBusinessUser(
 	}
 
 	if userByToken == nil {
-		if identityOwner.TokenUserID != 0 && identityOwner.TokenUserID != tokenUserID {
-			return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "identity already bound to another account", nil)
-		}
-		if identityOwner.TokenUserID == 0 {
+		if identityOwner.TokenUserID != tokenUserID {
 			if err := s.svcCtx.AuthRepo.UpdateUserTokenUserID(s.ctx, identityOwner.ID, tokenUserID); err != nil {
 				return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
 			}
@@ -770,10 +767,6 @@ func (s *authFlow) bindProviderIdentityToBusinessUser(
 
 	if userByToken.ID == identityOwner.ID {
 		return userByToken, nil
-	}
-
-	if identityOwner.TokenUserID != 0 && identityOwner.TokenUserID != tokenUserID {
-		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "identity already bound to another account", nil)
 	}
 
 	_, identity, err := s.svcCtx.AuthRepo.FindUserByIdentity(s.ctx, tenant.ID, provider, subject)
@@ -821,6 +814,13 @@ func (s *authFlow) bindProviderIdentityToBusinessUser(
 	}
 	userByToken.LastLoginAt = &now
 	return userByToken, nil
+}
+
+func authUserIDForLog(user *model.AuthUser) uint {
+	if user == nil {
+		return 0
+	}
+	return user.ID
 }
 
 func (s *authFlow) resolveTenantRuntimeConfig(tenantKey string) (*tenantRuntimeConfig, error) {

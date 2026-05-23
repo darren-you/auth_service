@@ -1,3 +1,3 @@
-修复第三方登录身份重复绑定
+修复微信登录历史身份映射归并
 
-当微信等 Provider 身份同步到已存在业务用户时，将认证身份迁移到已有 token 用户再签发会话，避免 auth_users token_user_id 唯一索引冲突导致登录 500。
+信任业务 bridge 返回的业务用户并迁移历史 provider identity，避免旧 token_user_id 映射导致登录 panic 和 HTML 响应。

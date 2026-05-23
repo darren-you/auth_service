@@ -302,7 +302,7 @@ func TestBindProviderIdentityToBusinessUserMovesIdentityToExistingTokenUser(t *t
 	t.Parallel()
 
 	repo := &phoneIdentityAuthRepoStub{
-		identityOwner: &model.AuthUser{ID: 20, TenantID: 7},
+		identityOwner: &model.AuthUser{ID: 20, TenantID: 7, TokenUserID: 1},
 		identity: &model.AuthIdentity{
 			ID:              21,
 			TenantID:        7,
@@ -386,6 +386,44 @@ func TestBindProviderIdentityToBusinessUserAssignsTokenUserWhenMissing(t *testin
 	}
 	if repo.upsertedIdentity != nil {
 		t.Fatalf("did not expect identity move when no token auth user exists, got %#v", repo.upsertedIdentity)
+	}
+}
+
+func TestBindProviderIdentityToBusinessUserRepairsStaleTokenUserWhenMissing(t *testing.T) {
+	t.Parallel()
+
+	repo := &phoneIdentityAuthRepoStub{
+		identityOwner: &model.AuthUser{ID: 20, TenantID: 7, TokenUserID: 1},
+		identity: &model.AuthIdentity{
+			ID:              21,
+			TenantID:        7,
+			AuthUserID:      20,
+			Provider:        providerkeys.ProviderWeChatMiniProgram,
+			ProviderSubject: "openid-123",
+		},
+	}
+	authFlow := newAuthFlow(context.Background(), &svc.ServiceContext{AuthRepo: repo})
+
+	user, err := authFlow.bindProviderIdentityToBusinessUser(
+		&model.AuthTenant{ID: 7, TenantKey: "elook"},
+		&model.AuthProviderConfig{ClientType: providerkeys.ClientTypeMiniProgram},
+		providerkeys.ProviderWeChatMiniProgram,
+		"openid-123",
+		"union-123",
+		"微信用户",
+		"",
+		`{"openid":"openid-123"}`,
+		repo.identityOwner,
+		17,
+	)
+	if err != nil {
+		t.Fatalf("bindProviderIdentityToBusinessUser returned error: %v", err)
+	}
+	if user.ID != 20 || user.TokenUserID != 17 {
+		t.Fatalf("expected identity owner 20 to repair token user id to 17, got %#v", user)
+	}
+	if repo.updatedTokenAuthID != 20 || repo.updatedTokenUserID != 17 {
+		t.Fatalf("expected token user id repair for auth user 20, got auth=%d token=%d", repo.updatedTokenAuthID, repo.updatedTokenUserID)
 	}
 }
 

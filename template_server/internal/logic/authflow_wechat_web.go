@@ -126,7 +126,7 @@ func (s *authFlow) loginWithWeChatWeb(req *ProviderCallbackRequest) (*SessionRes
 			"wechat web login bind identity to business user failed: tenant=%s openid=%s auth_user_id=%d business_user_id=%d err=%v",
 			tenant.TenantKey,
 			maskTail(oauthToken.OpenID, 6),
-			user.ID,
+			authUserIDForLog(user),
 			businessUser.UserID,
 			err,
 		)

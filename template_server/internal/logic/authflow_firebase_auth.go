@@ -102,7 +102,7 @@ func (s *authFlow) loginWithFirebaseAuth(req *ProviderCallbackRequest) (*Session
 			"firebase auth bind identity to business user failed: tenant=%s uid=%s auth_user_id=%d business_user_id=%d err=%v",
 			tenant.TenantKey,
 			maskTail(verifiedToken.UID, 6),
-			user.ID,
+			authUserIDForLog(user),
 			businessUser.UserID,
 			err,
 		)
