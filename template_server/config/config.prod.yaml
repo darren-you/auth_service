@@ -108,7 +108,7 @@ auth:
           client_type: miniprogram
           enabled: true
           app_id: wx4b158c199ebc23c8
-          app_secret: "{{ secret `auth.tenants.elook.providers.wechat.app_secret` }}"
+          app_secret: 802c7a69dffb6f7389f31857867b6e90
         - provider: password
           client_type: default
           enabled: true
