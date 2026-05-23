@@ -42,6 +42,7 @@ func (s *authFlow) loginWithWeChatMiniProgram(req *ProviderCallbackRequest) (*Se
 
 	displayName := firstNonEmpty(req.DisplayName, defaultDisplayName(providerkeys.ProviderWeChatMiniProgram, sessionResp.OpenID))
 	avatarURL := strings.TrimSpace(req.AvatarURL)
+	profileJSON := marshalJSON(sessionResp)
 	user, err := s.upsertIdentityUser(
 		tenant,
 		providerConfig,
@@ -51,7 +52,7 @@ func (s *authFlow) loginWithWeChatMiniProgram(req *ProviderCallbackRequest) (*Se
 		displayName,
 		avatarURL,
 		"user",
-		marshalJSON(sessionResp),
+		profileJSON,
 	)
 	if err != nil {
 		s.Errorf(
@@ -70,6 +71,29 @@ func (s *authFlow) loginWithWeChatMiniProgram(req *ProviderCallbackRequest) (*Se
 			tenant.TenantKey,
 			maskTail(sessionResp.OpenID, 6),
 			user.ID,
+			err,
+		)
+		return nil, err
+	}
+	user, err = s.bindProviderIdentityToBusinessUser(
+		tenant,
+		providerConfig,
+		providerkeys.ProviderWeChatMiniProgram,
+		sessionResp.OpenID,
+		sessionResp.UnionID,
+		displayName,
+		avatarURL,
+		profileJSON,
+		user,
+		businessUser.UserID,
+	)
+	if err != nil {
+		s.Errorf(
+			"wechat miniprogram login bind identity to business user failed: tenant=%s openid=%s auth_user_id=%d business_user_id=%d err=%v",
+			tenant.TenantKey,
+			maskTail(sessionResp.OpenID, 6),
+			user.ID,
+			businessUser.UserID,
 			err,
 		)
 		return nil, err

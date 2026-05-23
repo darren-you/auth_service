@@ -298,6 +298,97 @@ func TestUpsertPhoneIdentityUserCreatesTokenMappedUserWhenMissing(t *testing.T) 
 	}
 }
 
+func TestBindProviderIdentityToBusinessUserMovesIdentityToExistingTokenUser(t *testing.T) {
+	t.Parallel()
+
+	repo := &phoneIdentityAuthRepoStub{
+		identityOwner: &model.AuthUser{ID: 20, TenantID: 7},
+		identity: &model.AuthIdentity{
+			ID:              21,
+			TenantID:        7,
+			AuthUserID:      20,
+			Provider:        providerkeys.ProviderWeChatMiniProgram,
+			ClientType:      providerkeys.ClientTypeMiniProgram,
+			ProviderSubject: "openid-123",
+			UnionID:         "union-123",
+		},
+		userByToken: &model.AuthUser{ID: 10, TenantID: 7, TokenUserID: 17, DisplayName: "旧昵称"},
+	}
+	authFlow := newAuthFlow(context.Background(), &svc.ServiceContext{AuthRepo: repo})
+
+	user, err := authFlow.bindProviderIdentityToBusinessUser(
+		&model.AuthTenant{ID: 7, TenantKey: "elook"},
+		&model.AuthProviderConfig{ClientType: providerkeys.ClientTypeMiniProgram},
+		providerkeys.ProviderWeChatMiniProgram,
+		"openid-123",
+		"union-123",
+		"微信用户",
+		"https://example.com/avatar.jpg",
+		`{"openid":"openid-123"}`,
+		repo.identityOwner,
+		17,
+	)
+	if err != nil {
+		t.Fatalf("bindProviderIdentityToBusinessUser returned error: %v", err)
+	}
+	if user.ID != 10 {
+		t.Fatalf("expected existing token auth user 10, got %d", user.ID)
+	}
+	if repo.upsertedUserID != 10 {
+		t.Fatalf("expected identity to be upserted for auth user 10, got %d", repo.upsertedUserID)
+	}
+	if repo.upsertedIdentity == nil || repo.upsertedIdentity.AuthUserID != 10 || repo.upsertedIdentity.ID != 21 {
+		t.Fatalf("expected provider identity to move to auth user 10, got %#v", repo.upsertedIdentity)
+	}
+	if repo.updatedLoginUserID != 10 {
+		t.Fatalf("expected token auth user login to update, got %d", repo.updatedLoginUserID)
+	}
+	if repo.updatedTokenAuthID != 0 || repo.updatedTokenUserID != 0 {
+		t.Fatalf("did not expect token user id update, got auth=%d token=%d", repo.updatedTokenAuthID, repo.updatedTokenUserID)
+	}
+}
+
+func TestBindProviderIdentityToBusinessUserAssignsTokenUserWhenMissing(t *testing.T) {
+	t.Parallel()
+
+	repo := &phoneIdentityAuthRepoStub{
+		identityOwner: &model.AuthUser{ID: 20, TenantID: 7},
+		identity: &model.AuthIdentity{
+			ID:              21,
+			TenantID:        7,
+			AuthUserID:      20,
+			Provider:        providerkeys.ProviderWeChatMiniProgram,
+			ProviderSubject: "openid-123",
+		},
+	}
+	authFlow := newAuthFlow(context.Background(), &svc.ServiceContext{AuthRepo: repo})
+
+	user, err := authFlow.bindProviderIdentityToBusinessUser(
+		&model.AuthTenant{ID: 7, TenantKey: "elook"},
+		&model.AuthProviderConfig{ClientType: providerkeys.ClientTypeMiniProgram},
+		providerkeys.ProviderWeChatMiniProgram,
+		"openid-123",
+		"union-123",
+		"微信用户",
+		"",
+		`{"openid":"openid-123"}`,
+		repo.identityOwner,
+		17,
+	)
+	if err != nil {
+		t.Fatalf("bindProviderIdentityToBusinessUser returned error: %v", err)
+	}
+	if user.ID != 20 || user.TokenUserID != 17 {
+		t.Fatalf("expected identity owner 20 to receive token user id 17, got %#v", user)
+	}
+	if repo.updatedTokenAuthID != 20 || repo.updatedTokenUserID != 17 {
+		t.Fatalf("expected token user id update for auth user 20, got auth=%d token=%d", repo.updatedTokenAuthID, repo.updatedTokenUserID)
+	}
+	if repo.upsertedIdentity != nil {
+		t.Fatalf("did not expect identity move when no token auth user exists, got %#v", repo.upsertedIdentity)
+	}
+}
+
 func TestGetLoginURLForWeChatAppReturnsStateOnly(t *testing.T) {
 	t.Parallel()
 

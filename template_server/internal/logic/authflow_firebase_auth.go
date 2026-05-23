@@ -44,6 +44,7 @@ func (s *authFlow) loginWithFirebaseAuth(req *ProviderCallbackRequest) (*Session
 
 	displayName := firstNonEmpty(verifiedToken.DisplayName, req.DisplayName, defaultDisplayName(providerkeys.ProviderFirebaseAuth, verifiedToken.UID))
 	avatarURL := firstNonEmpty(verifiedToken.AvatarURL, req.AvatarURL)
+	profileJSON := marshalJSON(verifiedToken.RawClaims)
 	user, err := s.upsertIdentityUser(
 		tenant,
 		providerConfig,
@@ -53,7 +54,7 @@ func (s *authFlow) loginWithFirebaseAuth(req *ProviderCallbackRequest) (*Session
 		displayName,
 		avatarURL,
 		"user",
-		marshalJSON(verifiedToken.RawClaims),
+		profileJSON,
 	)
 	if err != nil {
 		s.Errorf(
@@ -80,6 +81,29 @@ func (s *authFlow) loginWithFirebaseAuth(req *ProviderCallbackRequest) (*Session
 			tenant.TenantKey,
 			maskTail(verifiedToken.UID, 6),
 			user.ID,
+			err,
+		)
+		return nil, err
+	}
+	user, err = s.bindProviderIdentityToBusinessUser(
+		tenant,
+		providerConfig,
+		providerkeys.ProviderFirebaseAuth,
+		verifiedToken.UID,
+		"",
+		displayName,
+		avatarURL,
+		profileJSON,
+		user,
+		businessUser.UserID,
+	)
+	if err != nil {
+		s.Errorf(
+			"firebase auth bind identity to business user failed: tenant=%s uid=%s auth_user_id=%d business_user_id=%d err=%v",
+			tenant.TenantKey,
+			maskTail(verifiedToken.UID, 6),
+			user.ID,
+			businessUser.UserID,
 			err,
 		)
 		return nil, err

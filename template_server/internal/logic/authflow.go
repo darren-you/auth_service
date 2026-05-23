@@ -372,7 +372,8 @@ func (s *authFlow) loginWithApple(req *ProviderCallbackRequest) (*SessionRespons
 	}
 
 	displayName := firstNonEmpty(req.DisplayName, defaultDisplayName("apple", uniqueID))
-	user, err := s.upsertIdentityUser(tenant, providerConfig, "apple", uniqueID, "", displayName, req.AvatarURL, "user", marshalJSON(validationResp))
+	profileJSON := marshalJSON(validationResp)
+	user, err := s.upsertIdentityUser(tenant, providerConfig, "apple", uniqueID, "", displayName, req.AvatarURL, "user", profileJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -383,6 +384,21 @@ func (s *authFlow) loginWithApple(req *ProviderCallbackRequest) (*SessionRespons
 		CurrentUserID:   uint(req.CurrentUserID),
 		CurrentUserRole: req.CurrentUserRole,
 	})
+	if err != nil {
+		return nil, err
+	}
+	user, err = s.bindProviderIdentityToBusinessUser(
+		tenant,
+		providerConfig,
+		"apple",
+		uniqueID,
+		"",
+		displayName,
+		req.AvatarURL,
+		profileJSON,
+		user,
+		businessUser.UserID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +486,8 @@ func (s *authFlow) loginWithGuest(req *ProviderCallbackRequest) (*SessionRespons
 	}
 
 	displayName := firstNonEmpty(req.DisplayName, authguest.UsernameFromDeviceID(deviceID))
-	user, err := s.upsertIdentityUser(tenant, providerConfig, "guest", deviceID, "", displayName, req.AvatarURL, "guest", marshalJSON(map[string]string{"device_id": deviceID}))
+	profileJSON := marshalJSON(map[string]string{"device_id": deviceID})
+	user, err := s.upsertIdentityUser(tenant, providerConfig, "guest", deviceID, "", displayName, req.AvatarURL, "guest", profileJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -479,6 +496,21 @@ func (s *authFlow) loginWithGuest(req *ProviderCallbackRequest) (*SessionRespons
 		DisplayName: displayName,
 		AvatarURL:   req.AvatarURL,
 	})
+	if err != nil {
+		return nil, err
+	}
+	user, err = s.bindProviderIdentityToBusinessUser(
+		tenant,
+		providerConfig,
+		"guest",
+		deviceID,
+		"",
+		displayName,
+		req.AvatarURL,
+		profileJSON,
+		user,
+		businessUser.UserID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -695,6 +727,100 @@ func (s *authFlow) issueSession(tenant *model.AuthTenant, authUserID uint, provi
 			Status:      normalizedProfile.Status,
 		},
 	}, nil
+}
+
+func (s *authFlow) bindProviderIdentityToBusinessUser(
+	tenant *model.AuthTenant,
+	providerConfig *model.AuthProviderConfig,
+	provider string,
+	subject string,
+	unionID string,
+	displayName string,
+	avatarURL string,
+	profileJSON string,
+	identityOwner *model.AuthUser,
+	tokenUserID uint,
+) (*model.AuthUser, error) {
+	if tenant == nil || providerConfig == nil || identityOwner == nil || identityOwner.ID == 0 || tokenUserID == 0 {
+		return identityOwner, nil
+	}
+
+	userByToken, err := s.svcCtx.AuthRepo.FindUserByTokenUserID(s.ctx, tenant.ID, tokenUserID)
+	if err != nil {
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("find auth user by token user id failed: %w", err),
+		)
+	}
+
+	if userByToken == nil {
+		if identityOwner.TokenUserID != 0 && identityOwner.TokenUserID != tokenUserID {
+			return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "identity already bound to another account", nil)
+		}
+		if identityOwner.TokenUserID == 0 {
+			if err := s.svcCtx.AuthRepo.UpdateUserTokenUserID(s.ctx, identityOwner.ID, tokenUserID); err != nil {
+				return nil, appErrors.New(appErrors.ErrInternalServer.Code, appErrors.ErrInternalServer.HTTPStatus, appErrors.ErrInternalServer.Message, err)
+			}
+			identityOwner.TokenUserID = tokenUserID
+		}
+		return identityOwner, nil
+	}
+
+	if userByToken.ID == identityOwner.ID {
+		return userByToken, nil
+	}
+
+	if identityOwner.TokenUserID != 0 && identityOwner.TokenUserID != tokenUserID {
+		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, "identity already bound to another account", nil)
+	}
+
+	_, identity, err := s.svcCtx.AuthRepo.FindUserByIdentity(s.ctx, tenant.ID, provider, subject)
+	if err != nil {
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("find auth identity before bind failed: %w", err),
+		)
+	}
+	if identity == nil {
+		identity = &model.AuthIdentity{
+			TenantID:        tenant.ID,
+			Provider:        provider,
+			ProviderSubject: subject,
+		}
+	}
+	identity.ClientType = providerConfig.ClientType
+	identity.UnionID = strings.TrimSpace(unionID)
+	identity.ProfileJSON = profileJSON
+	if err := s.svcCtx.AuthRepo.UpsertIdentityForUser(s.ctx, userByToken, identity); err != nil {
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("upsert auth identity for token user failed: %w", err),
+		)
+	}
+
+	now := time.Now()
+	if err := s.svcCtx.AuthRepo.UpdateUserLogin(s.ctx, userByToken.ID, displayName, avatarURL, now); err != nil {
+		return nil, appErrors.New(
+			appErrors.ErrInternalServer.Code,
+			appErrors.ErrInternalServer.HTTPStatus,
+			appErrors.ErrInternalServer.Message,
+			fmt.Errorf("update token auth user login failed: %w", err),
+		)
+	}
+	if strings.TrimSpace(displayName) != "" {
+		userByToken.DisplayName = strings.TrimSpace(displayName)
+	}
+	if strings.TrimSpace(avatarURL) != "" {
+		userByToken.AvatarURL = strings.TrimSpace(avatarURL)
+	}
+	userByToken.LastLoginAt = &now
+	return userByToken, nil
 }
 
 func (s *authFlow) resolveTenantRuntimeConfig(tenantKey string) (*tenantRuntimeConfig, error) {

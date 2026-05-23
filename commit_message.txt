@@ -1,3 +1,3 @@
-切换 elook 小程序认证主体配置
+修复第三方登录身份重复绑定
 
-将 auth_service 中 elook 租户的微信小程序 provider 切换到 WeMini 测试开发小程序，并把 AppID 与 AppSecret 统一收口到 Git YAML 配置。
+当微信等 Provider 身份同步到已存在业务用户时，将认证身份迁移到已有 token 用户再签发会话，避免 auth_users token_user_id 唯一索引冲突导致登录 500。

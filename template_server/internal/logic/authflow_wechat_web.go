@@ -76,6 +76,7 @@ func (s *authFlow) loginWithWeChatWeb(req *ProviderCallbackRequest) (*SessionRes
 		}
 	}
 
+	profileJSON := marshalJSON(userInfo)
 	user, err := s.upsertIdentityUser(
 		tenant,
 		providerConfig,
@@ -85,7 +86,7 @@ func (s *authFlow) loginWithWeChatWeb(req *ProviderCallbackRequest) (*SessionRes
 		displayName,
 		avatarURL,
 		"user",
-		marshalJSON(userInfo),
+		profileJSON,
 	)
 	if err != nil {
 		s.Errorf(
@@ -104,6 +105,29 @@ func (s *authFlow) loginWithWeChatWeb(req *ProviderCallbackRequest) (*SessionRes
 			tenant.TenantKey,
 			maskTail(oauthToken.OpenID, 6),
 			user.ID,
+			err,
+		)
+		return nil, err
+	}
+	user, err = s.bindProviderIdentityToBusinessUser(
+		tenant,
+		providerConfig,
+		providerkeys.ProviderWeChatWeb,
+		oauthToken.OpenID,
+		oauthToken.UnionID,
+		displayName,
+		avatarURL,
+		profileJSON,
+		user,
+		businessUser.UserID,
+	)
+	if err != nil {
+		s.Errorf(
+			"wechat web login bind identity to business user failed: tenant=%s openid=%s auth_user_id=%d business_user_id=%d err=%v",
+			tenant.TenantKey,
+			maskTail(oauthToken.OpenID, 6),
+			user.ID,
+			businessUser.UserID,
 			err,
 		)
 		return nil, err
