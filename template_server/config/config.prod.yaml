@@ -123,7 +123,7 @@ auth:
             secret_key: "Qo073mIbkgZGk170qVyUvAC5nYFqJcjf"
             app_key: "54150427e31d1628c60440a3625f7740"
             sms_sdk_app_id: "1401133423"
-            sign_name: 益课家校
+            sign_name: 两江新区益课学生校外托管
             region: ap-guangzhou
             templates:
               login:

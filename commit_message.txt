@@ -1,3 +1,3 @@
-支持腾讯云短信 AppKey 签名发送
+修正 elook 腾讯云短信签名
 
-elook 短信配置直接纳入私仓 YAML 管理，并在配置 app_key 时优先使用 SDKAppID/AppKey 签名接口发送验证码。
+将 elook 短信配置中的 sign_name 改为腾讯云已审批短信签名，恢复验证码短信发送。
