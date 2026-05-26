@@ -31,6 +31,27 @@ func TestResolveTemplateUsesSceneSpecificParams(t *testing.T) {
 	}
 }
 
+func TestAppKeySignature(t *testing.T) {
+	got := appKeySignature("5f03a35d00ee52a21327ab048186a2c4", "7226249334", 1457336869, "13788888888")
+	want := "ecab4881ee80ad3d76bb1da68387428ca752eb885e52621a3129dcf4d9bc4fd4"
+	if got != want {
+		t.Fatalf("signature = %q, want %q", got, want)
+	}
+}
+
+func TestNormalizeMainlandMobile(t *testing.T) {
+	cases := map[string]string{
+		"17608265580":    "17608265580",
+		"+8617608265580": "17608265580",
+		"8617608265580":  "17608265580",
+	}
+	for input, want := range cases {
+		if got := normalizeMainlandMobile(input); got != want {
+			t.Fatalf("normalizeMainlandMobile(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
 func TestResolveTemplateParamValues(t *testing.T) {
 	values := resolveTemplateParamValues([]string{"captcha", "expire_minutes"}, authphone.CaptchaMessage{
 		Captcha:       "1234",

@@ -1,9 +1,17 @@
 package tencentsms
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	authphone "github.com/darren-you/auth_service/template_server/pkg/phone"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
@@ -12,6 +20,7 @@ import (
 )
 
 const defaultRegion = "ap-guangzhou"
+const defaultAppKeyEndpoint = "https://yun.tim.qq.com/v5/tlssmssvr/sendsms"
 
 type Config struct {
 	SecretID       string
@@ -23,6 +32,7 @@ type Config struct {
 	TemplateParams []string
 	Templates      map[string]TemplateConfig
 	Region         string
+	AppKeyEndpoint string
 }
 
 type TemplateConfig struct {
@@ -39,6 +49,9 @@ func NewSender(cfg Config) *Sender {
 }
 
 func (s *Sender) SendCaptcha(message authphone.CaptchaMessage) error {
+	if strings.TrimSpace(s.config.AppKey) != "" {
+		return s.sendCaptchaWithAppKey(message)
+	}
 	credential := common.NewCredential(strings.TrimSpace(s.config.SecretID), strings.TrimSpace(s.config.SecretKey))
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.ReqMethod = "POST"
@@ -84,6 +97,118 @@ func (s *Sender) SendCaptcha(message authphone.CaptchaMessage) error {
 		return fmt.Errorf("failed to send sms to %s: %s - %s", phoneNumber, *status.Code, message)
 	}
 	return nil
+}
+
+func (s *Sender) sendCaptchaWithAppKey(message authphone.CaptchaMessage) error {
+	templateID, params := s.resolveTemplate(message.Scene)
+	if strings.TrimSpace(templateID) == "" {
+		return fmt.Errorf("tencent sms template id is required for scene %s", authphone.NormalizeCaptchaScene(message.Scene))
+	}
+	tplID, err := strconv.Atoi(strings.TrimSpace(templateID))
+	if err != nil {
+		return fmt.Errorf("tencent sms template id must be numeric: %w", err)
+	}
+
+	appID := strings.TrimSpace(s.config.SmsSDKAppID)
+	appKey := strings.TrimSpace(s.config.AppKey)
+	phone := normalizeMainlandMobile(message.Phone)
+	now := time.Now().Unix()
+	random := strconv.FormatInt(time.Now().UnixNano()%1000000000, 10)
+	sig := appKeySignature(appKey, random, now, phone)
+
+	endpoint := strings.TrimSpace(s.config.AppKeyEndpoint)
+	if endpoint == "" {
+		endpoint = defaultAppKeyEndpoint
+	}
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("parse tencent sms endpoint: %w", err)
+	}
+	query := parsedURL.Query()
+	query.Set("sdkappid", appID)
+	query.Set("random", random)
+	parsedURL.RawQuery = query.Encode()
+
+	body := appKeySendRequest{
+		Tel: appKeyPhone{
+			NationCode: "86",
+			Mobile:     phone,
+		},
+		Sign:     strings.TrimSpace(s.config.SignName),
+		Template: tplID,
+		Params:   resolveTemplateParamValues(params, message),
+		Sig:      sig,
+		Time:     now,
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal tencent sms request: %w", err)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	request, err := http.NewRequest(http.MethodPost, parsedURL.String(), bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("create tencent sms request: %w", err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	response, err := client.Do(request)
+	if err != nil {
+		return fmt.Errorf("send tencent sms request: %w", err)
+	}
+	defer response.Body.Close()
+
+	content, err := io.ReadAll(response.Body)
+	if err != nil {
+		return fmt.Errorf("read tencent sms response: %w", err)
+	}
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("tencent sms http status %d: %s", response.StatusCode, strings.TrimSpace(string(content)))
+	}
+
+	var result appKeySendResponse
+	if err := json.Unmarshal(content, &result); err != nil {
+		return fmt.Errorf("parse tencent sms response: %w", err)
+	}
+	if result.Result != 0 {
+		return fmt.Errorf("failed to send sms: %d - %s", result.Result, result.ErrMsg)
+	}
+	return nil
+}
+
+type appKeyPhone struct {
+	NationCode string `json:"nationcode"`
+	Mobile     string `json:"mobile"`
+}
+
+type appKeySendRequest struct {
+	Tel      appKeyPhone `json:"tel"`
+	Sign     string      `json:"sign"`
+	Template int         `json:"tpl_id"`
+	Params   []string    `json:"params"`
+	Sig      string      `json:"sig"`
+	Time     int64       `json:"time"`
+	Extend   string      `json:"extend,omitempty"`
+	Ext      string      `json:"ext,omitempty"`
+}
+
+type appKeySendResponse struct {
+	Result int    `json:"result"`
+	ErrMsg string `json:"errmsg"`
+}
+
+func appKeySignature(appKey string, random string, timestamp int64, mobile string) string {
+	source := fmt.Sprintf("appkey=%s&random=%s&time=%d&mobile=%s", appKey, random, timestamp, mobile)
+	sum := sha256.Sum256([]byte(source))
+	return hex.EncodeToString(sum[:])
+}
+
+func normalizeMainlandMobile(phone string) string {
+	normalized := strings.TrimSpace(phone)
+	normalized = strings.TrimPrefix(normalized, "+86")
+	if len(normalized) == 13 && strings.HasPrefix(normalized, "86") {
+		normalized = strings.TrimPrefix(normalized, "86")
+	}
+	return normalized
 }
 
 func (s *Sender) resolveTemplate(scene string) (string, []string) {

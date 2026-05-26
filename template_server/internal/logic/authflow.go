@@ -1455,9 +1455,11 @@ func (c *phoneSMSExtra) ToTencentTemplateConfig() map[string]authtencentsms.Temp
 }
 
 func (c *phoneSMSExtra) IsConfigured() bool {
-	return c != nil &&
-		c.SecretID != "" &&
-		c.SecretKey != "" &&
+	if c == nil {
+		return false
+	}
+	hasCredential := c.AppKey != "" || (c.SecretID != "" && c.SecretKey != "")
+	return hasCredential &&
 		c.SmsSDKAppID != "" &&
 		c.SignName != "" &&
 		(c.TemplateID != "" || len(c.Templates) > 0)
