@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -25,6 +26,46 @@ func TestValidateAcceptsContainerNetworkBridgeBaseURL(t *testing.T) {
 
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("expected container-network bridge_base_url to pass validation, got %v", err)
+	}
+}
+
+func TestProviderConfigEffectiveExtraJSONMergesStructuredSMS(t *testing.T) {
+	provider := ProviderConfig{
+		ExtraJSON: `{"sms":{"secret_id":"old-secret-id","secret_key":"old-secret-key"}}`,
+		SMS: &ProviderSMSConfig{
+			SmsSDKAppID: "1401133423",
+			SignName:    "益课家校",
+			Region:      "ap-guangzhou",
+			Templates: map[string]ProviderSMSTemplateConfig{
+				"login": {
+					TemplateID: "2650973",
+					Params:     []string{"captcha", "expire_minutes"},
+				},
+				"rebind": {
+					TemplateID: "2650974",
+					Params:     []string{"captcha"},
+				},
+			},
+		},
+	}
+
+	var extra map[string]map[string]any
+	if err := json.Unmarshal([]byte(provider.EffectiveExtraJSON()), &extra); err != nil {
+		t.Fatalf("EffectiveExtraJSON returned invalid JSON: %v", err)
+	}
+	sms := extra["sms"]
+	if sms["secret_id"] != "old-secret-id" {
+		t.Fatalf("secret_id = %v, want preserved secret", sms["secret_id"])
+	}
+	if sms["sms_sdk_app_id"] != "1401133423" {
+		t.Fatalf("sms_sdk_app_id = %v, want configured SDK app id", sms["sms_sdk_app_id"])
+	}
+	templates, ok := sms["templates"].(map[string]any)
+	if !ok {
+		t.Fatalf("templates missing from effective extra json: %#v", sms["templates"])
+	}
+	if templates["rebind"] == nil {
+		t.Fatalf("rebind template missing: %#v", templates)
 	}
 }
 

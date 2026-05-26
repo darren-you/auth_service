@@ -118,7 +118,27 @@ auth:
           test_phone: "18912345678"
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
-          extra_json: "{{ secret `auth.tenants.elook.providers.phone.extra_json` }}"
+          sms:
+            secret_id: "{{ secret `auth.tenants.elook.providers.phone.sms.secret_id` }}"
+            secret_key: "{{ secret `auth.tenants.elook.providers.phone.sms.secret_key` }}"
+            app_key: "{{ secret `auth.tenants.elook.providers.phone.sms.app_key` }}"
+            sms_sdk_app_id: "1401133423"
+            sign_name: 益课家校
+            region: ap-guangzhou
+            templates:
+              login:
+                template_id: "2650973"
+                params:
+                  - captcha
+                  - expire_minutes
+              bind:
+                template_id: "2650974"
+                params:
+                  - captcha
+              rebind:
+                template_id: "2650974"
+                params:
+                  - captcha
     - key: template_project
       name: Template Project
       enabled: true

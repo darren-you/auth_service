@@ -1,3 +1,3 @@
-修复微信登录历史身份映射归并
+接入 elook 场景化短信验证码模板
 
-信任业务 bridge 返回的业务用户并迁移历史 provider identity，避免旧 token_user_id 映射导致登录 panic 和 HTML 响应。
+新增手机号验证码 scene 透传与腾讯云多模板配置，支持 elook 登录和换绑手机号使用独立短信模板。

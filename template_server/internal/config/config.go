@@ -101,21 +101,107 @@ type TenantConfig struct {
 }
 
 type ProviderConfig struct {
-	Provider       string `json:"provider"`
-	ClientType     string `json:"client_type"`
-	Enabled        bool   `json:"enabled"`
-	AppID          string `json:"app_id,optional"`
-	AppSecret      string `json:"app_secret,optional"`
-	RedirectURI    string `json:"redirect_uri,optional"`
-	Scope          string `json:"scope,optional"`
-	TeamID         string `json:"team_id,optional"`
-	ClientID       string `json:"client_id,optional"`
-	KeyID          string `json:"key_id,optional"`
-	SigningKey     string `json:"signing_key,optional"`
-	TestPhone      string `json:"test_phone,optional"`
-	TestCaptcha    string `json:"test_captcha,optional"`
-	TestCaptchaKey string `json:"test_captcha_key,optional"`
-	ExtraJSON      string `json:"extra_json,optional"`
+	Provider       string             `json:"provider"`
+	ClientType     string             `json:"client_type"`
+	Enabled        bool               `json:"enabled"`
+	AppID          string             `json:"app_id,optional"`
+	AppSecret      string             `json:"app_secret,optional"`
+	RedirectURI    string             `json:"redirect_uri,optional"`
+	Scope          string             `json:"scope,optional"`
+	TeamID         string             `json:"team_id,optional"`
+	ClientID       string             `json:"client_id,optional"`
+	KeyID          string             `json:"key_id,optional"`
+	SigningKey     string             `json:"signing_key,optional"`
+	TestPhone      string             `json:"test_phone,optional"`
+	TestCaptcha    string             `json:"test_captcha,optional"`
+	TestCaptchaKey string             `json:"test_captcha_key,optional"`
+	ExtraJSON      string             `json:"extra_json,optional"`
+	SMS            *ProviderSMSConfig `json:"sms,optional"`
+}
+
+type ProviderSMSConfig struct {
+	SecretID       string                               `json:"secret_id,optional"`
+	SecretKey      string                               `json:"secret_key,optional"`
+	AppKey         string                               `json:"app_key,optional"`
+	SmsSDKAppID    string                               `json:"sms_sdk_app_id,optional"`
+	SignName       string                               `json:"sign_name,optional"`
+	TemplateID     string                               `json:"template_id,optional"`
+	TemplateParams []string                             `json:"template_params,optional"`
+	Templates      map[string]ProviderSMSTemplateConfig `json:"templates,optional"`
+	Region         string                               `json:"region,optional"`
+}
+
+type ProviderSMSTemplateConfig struct {
+	TemplateID string   `json:"template_id,optional"`
+	Params     []string `json:"params,optional"`
+}
+
+func (p ProviderConfig) EffectiveExtraJSON() string {
+	raw := strings.TrimSpace(p.ExtraJSON)
+	if p.SMS == nil {
+		return raw
+	}
+
+	extra := map[string]any{}
+	if raw != "" {
+		_ = json.Unmarshal([]byte(raw), &extra)
+	}
+	if extra == nil {
+		extra = map[string]any{}
+	}
+
+	sms := map[string]any{}
+	if existing, ok := extra["sms"].(map[string]any); ok {
+		for key, value := range existing {
+			sms[key] = value
+		}
+	}
+	mergeProviderSMSConfig(sms, p.SMS)
+	extra["sms"] = sms
+
+	payload, err := json.Marshal(extra)
+	if err != nil {
+		return raw
+	}
+	return string(payload)
+}
+
+func mergeProviderSMSConfig(target map[string]any, sms *ProviderSMSConfig) {
+	if sms == nil {
+		return
+	}
+	setNonEmpty(target, "secret_id", sms.SecretID)
+	setNonEmpty(target, "secret_key", sms.SecretKey)
+	setNonEmpty(target, "app_key", sms.AppKey)
+	setNonEmpty(target, "sms_sdk_app_id", sms.SmsSDKAppID)
+	setNonEmpty(target, "sign_name", sms.SignName)
+	setNonEmpty(target, "template_id", sms.TemplateID)
+	if len(sms.TemplateParams) > 0 {
+		target["template_params"] = sms.TemplateParams
+	}
+	setNonEmpty(target, "region", sms.Region)
+
+	if len(sms.Templates) == 0 {
+		return
+	}
+	templates := make(map[string]any, len(sms.Templates))
+	for scene, template := range sms.Templates {
+		templateMap := map[string]any{}
+		setNonEmpty(templateMap, "template_id", template.TemplateID)
+		if len(template.Params) > 0 {
+			templateMap["params"] = template.Params
+		}
+		templates[normalizePhoneCaptchaScene(scene)] = templateMap
+	}
+	target["templates"] = templates
+}
+
+func setNonEmpty(target map[string]any, key string, value string) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return
+	}
+	target[key] = trimmed
 }
 
 func (c *Config) Validate() error {
@@ -450,7 +536,63 @@ func normalizeConfig(cfg *Config) {
 			provider.TestCaptcha = strings.TrimSpace(provider.TestCaptcha)
 			provider.TestCaptchaKey = strings.TrimSpace(provider.TestCaptchaKey)
 			provider.ExtraJSON = strings.TrimSpace(provider.ExtraJSON)
+			normalizeProviderSMSConfig(provider.SMS)
 		}
+	}
+}
+
+func normalizeProviderSMSConfig(sms *ProviderSMSConfig) {
+	if sms == nil {
+		return
+	}
+	sms.SecretID = strings.TrimSpace(sms.SecretID)
+	sms.SecretKey = strings.TrimSpace(sms.SecretKey)
+	sms.AppKey = strings.TrimSpace(sms.AppKey)
+	sms.SmsSDKAppID = strings.TrimSpace(sms.SmsSDKAppID)
+	sms.SignName = strings.TrimSpace(sms.SignName)
+	sms.TemplateID = strings.TrimSpace(sms.TemplateID)
+	sms.TemplateParams = normalizeOptionalStringSlice(sms.TemplateParams)
+	sms.Region = strings.TrimSpace(sms.Region)
+
+	if len(sms.Templates) == 0 {
+		return
+	}
+	normalizedTemplates := make(map[string]ProviderSMSTemplateConfig, len(sms.Templates))
+	for scene, template := range sms.Templates {
+		normalizedTemplates[normalizePhoneCaptchaScene(scene)] = ProviderSMSTemplateConfig{
+			TemplateID: strings.TrimSpace(template.TemplateID),
+			Params:     normalizeOptionalStringSlice(template.Params),
+		}
+	}
+	sms.Templates = normalizedTemplates
+}
+
+func normalizeOptionalStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		result = append(result, trimmed)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func normalizePhoneCaptchaScene(scene string) string {
+	switch strings.ToLower(strings.TrimSpace(scene)) {
+	case "bind":
+		return "bind"
+	case "rebind":
+		return "rebind"
+	default:
+		return "login"
 	}
 }
 

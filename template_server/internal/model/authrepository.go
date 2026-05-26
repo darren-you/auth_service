@@ -144,7 +144,7 @@ func (r *authRepository) SyncCatalog(ctx context.Context, tenantConfigs []config
 					TestPhone:      providerCfg.TestPhone,
 					TestCaptcha:    providerCfg.TestCaptcha,
 					TestCaptchaKey: providerCfg.TestCaptchaKey,
-					ExtraJSON:      providerCfg.ExtraJSON,
+					ExtraJSON:      providerCfg.EffectiveExtraJSON(),
 				}))
 				if err != nil {
 					return err
@@ -164,7 +164,7 @@ func (r *authRepository) SyncCatalog(ctx context.Context, tenantConfigs []config
 			provider.TestPhone = providerCfg.TestPhone
 			provider.TestCaptcha = providerCfg.TestCaptcha
 			provider.TestCaptchaKey = providerCfg.TestCaptchaKey
-			provider.ExtraJSON = providerCfg.ExtraJSON
+			provider.ExtraJSON = providerCfg.EffectiveExtraJSON()
 			if err := r.providerConfigs.Update(ctx, toProviderRecord(provider)); err != nil {
 				return err
 			}

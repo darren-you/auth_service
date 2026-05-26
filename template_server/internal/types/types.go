@@ -79,6 +79,7 @@ type PhoneCaptchaSendReq struct {
 	TenantKey  string `json:"tenant_key"`
 	ClientType string `json:"client_type"`
 	Phone      string `json:"phone"`
+	Scene      string `json:"scene,optional"`
 }
 
 type PhoneCaptchaSendResp struct {
@@ -103,6 +104,7 @@ type ProviderCallbackReq struct {
 	Phone             string `json:"phone,optional"`
 	Captcha           string `json:"captcha,optional"`
 	CaptchaKey        string `json:"captcha_key,optional"`
+	Scene             string `json:"scene,optional"`
 	Token             string `json:"token,optional"`
 	Gyuid             string `json:"gyuid,optional"`
 	DeviceID          string `json:"device_id,optional"`

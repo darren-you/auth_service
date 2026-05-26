@@ -34,6 +34,7 @@
 - Apple 登录
 - 手机验证码登录
 - 手机验证码登录与已登录态绑定当前业务账号
+- 手机验证码可按 `scene=login|bind|rebind` 选择短信模板；`elook` 小程序当前使用「小程序登录验证码」与「小程序换绑验证码」两套腾讯云模板。
 - Getui 手机号快捷登录
 - 游客登录
 - 多租户 `tenant / provider / client_type` 配置同步
@@ -124,6 +125,16 @@
 - 如果业务侧在“已登录态绑定手机号 / 绑定新登录方式”场景下调用 provider callback，应透传 `current_user_id / current_user_role`，业务 bridge 需要把该登录方式绑定到当前业务用户，而不是创建新的业务账号
 - 当业务侧允许用户修改共享资料字段（如昵称、头像）时，应同步调用 `PUT /api/v1/auth/me` 回写认证域，保证后续登录、刷新 token 和 `/auth/me` 的资料读写一致
 - 当业务侧管理后台需要修改其他用户的共享资料字段（如昵称、头像、角色、状态）时，应调用 `PUT /api/v1/auth/internal/users`，并使用租户配置中的 `bridge_auth_key` 作为受信鉴权，不再直接把这些字段只写在业务库里
+
+## 手机验证码短信配置
+
+手机号验证码 provider 支持在租户配置中使用结构化 `sms` 配置，并在服务启动同步到 `auth_provider_configs.extra_json`。真实密钥继续使用 `secret_base` 占位符；非敏感的 `sms_sdk_app_id`、签名、模板 ID 与模板参数顺序保留在 YAML 中统一 Git 管理。
+
+`scene` 语义：
+
+- `login`：手机号验证码登录。
+- `bind`：首次绑定手机号。
+- `rebind`：换绑手机号；如未单独配置模板，会回退使用 `bind` 模板。
 
 ## 租户默认头像
 

@@ -21,7 +21,7 @@ type Store interface {
 }
 
 type Sender interface {
-	SendCaptcha(phone string, expireMinutes int, captcha string) error
+	SendCaptcha(message CaptchaMessage) error
 }
 
 type Config struct {
@@ -30,6 +30,13 @@ type Config struct {
 	TestCaptchaKey string
 	TTL            time.Duration
 	CaptchaLength  int
+}
+
+type CaptchaMessage struct {
+	Phone         string
+	ExpireMinutes int
+	Captcha       string
+	Scene         string
 }
 
 type SendResult struct {
@@ -41,6 +48,7 @@ type VerifyRequest struct {
 	Phone      string
 	Captcha    string
 	CaptchaKey string
+	Scene      string
 }
 
 type Service struct {
@@ -63,11 +71,12 @@ func NewService(store Store, sender Sender, cfg Config) *Service {
 	}
 }
 
-func (s *Service) Send(ctx context.Context, phone string) (*SendResult, error) {
+func (s *Service) Send(ctx context.Context, phone string, scene string) (*SendResult, error) {
 	phone = strings.TrimSpace(phone)
 	if phone == "" {
 		return nil, fmt.Errorf("phone is required")
 	}
+	normalizedScene := NormalizeCaptchaScene(scene)
 
 	captchaKey := strings.TrimSpace(s.config.TestCaptchaKey)
 	captcha := strings.TrimSpace(s.config.TestCaptcha)
@@ -85,13 +94,19 @@ func (s *Service) Send(ctx context.Context, phone string) (*SendResult, error) {
 	payload, err := json.Marshal(map[string]string{
 		"captchaKey": captchaKey,
 		"captcha":    captcha,
+		"scene":      normalizedScene,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	if !isTestPhone && s.sender != nil {
-		if err := s.sender.SendCaptcha(phone, int(s.config.TTL/time.Minute), captcha); err != nil {
+		if err := s.sender.SendCaptcha(CaptchaMessage{
+			Phone:         phone,
+			ExpireMinutes: int(s.config.TTL / time.Minute),
+			Captcha:       captcha,
+			Scene:         normalizedScene,
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -111,6 +126,7 @@ func (s *Service) Verify(ctx context.Context, req VerifyRequest) error {
 	if phone == "" {
 		return ErrInvalidCaptcha
 	}
+	scene := NormalizeCaptchaScene(req.Scene)
 
 	isTestPhone := strings.TrimSpace(s.config.TestPhone) != "" && phone == strings.TrimSpace(s.config.TestPhone)
 	if isTestPhone &&
@@ -127,6 +143,7 @@ func (s *Service) Verify(ctx context.Context, req VerifyRequest) error {
 	payload, err := json.Marshal(map[string]string{
 		"captchaKey": strings.TrimSpace(req.CaptchaKey),
 		"captcha":    strings.TrimSpace(req.Captcha),
+		"scene":      scene,
 	})
 	if err != nil {
 		return err
@@ -141,6 +158,17 @@ func (s *Service) Verify(ctx context.Context, req VerifyRequest) error {
 	}
 
 	return nil
+}
+
+func NormalizeCaptchaScene(scene string) string {
+	switch strings.ToLower(strings.TrimSpace(scene)) {
+	case "bind":
+		return "bind"
+	case "rebind":
+		return "rebind"
+	default:
+		return "login"
+	}
 }
 
 func generateDigits(length int) (string, error) {

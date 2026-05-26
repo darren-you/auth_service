@@ -1050,6 +1050,7 @@ func (s *authFlow) SendPhoneCaptcha(req *PhoneCaptchaSendRequest) (*PhoneCaptcha
 	if phone == "" {
 		return nil, appErrors.ErrBadRequest
 	}
+	scene := authphone.NormalizeCaptchaScene(req.Scene)
 
 	var sender authphone.Sender
 	isTestPhone := providerConfig.TestPhone != "" && phone == providerConfig.TestPhone
@@ -1062,17 +1063,20 @@ func (s *authFlow) SendPhoneCaptcha(req *PhoneCaptchaSendRequest) (*PhoneCaptcha
 			return nil, appErrors.New(appErrors.ErrConfigInvalid.Code, appErrors.ErrConfigInvalid.HTTPStatus, "phone sender is not configured", nil)
 		}
 		sender = authtencentsms.NewSender(authtencentsms.Config{
-			SecretID:    extra.SMS.SecretID,
-			SecretKey:   extra.SMS.SecretKey,
-			SmsSDKAppID: extra.SMS.SmsSDKAppID,
-			SignName:    extra.SMS.SignName,
-			TemplateID:  extra.SMS.TemplateID,
-			Region:      extra.SMS.Region,
+			SecretID:       extra.SMS.SecretID,
+			SecretKey:      extra.SMS.SecretKey,
+			AppKey:         extra.SMS.AppKey,
+			SmsSDKAppID:    extra.SMS.SmsSDKAppID,
+			SignName:       extra.SMS.SignName,
+			TemplateID:     extra.SMS.TemplateID,
+			TemplateParams: extra.SMS.TemplateParams,
+			Templates:      extra.SMS.ToTencentTemplateConfig(),
+			Region:         extra.SMS.Region,
 		})
 	}
 
 	phoneService := s.newPhoneService(tenant.TenantKey, providerConfig, sender)
-	result, err := phoneService.Send(s.ctx, phone)
+	result, err := phoneService.Send(s.ctx, phone, scene)
 	if err != nil {
 		return nil, appErrors.New(appErrors.ErrAuthFailed.Code, appErrors.ErrAuthFailed.HTTPStatus, appErrors.ErrAuthFailed.Message, err)
 	}
@@ -1092,12 +1096,14 @@ func (s *authFlow) loginWithPhoneCaptcha(tenant *model.AuthTenant, providerConfi
 	if phone == "" || captcha == "" || captchaKey == "" {
 		return nil, appErrors.ErrBadRequest
 	}
+	scene := resolvePhoneVerifyScene(req.Scene, uint(req.CurrentUserID))
 
 	phoneService := s.newPhoneService(tenant.TenantKey, providerConfig, nil)
 	if err := phoneService.Verify(s.ctx, authphone.VerifyRequest{
 		Phone:      phone,
 		Captcha:    captcha,
 		CaptchaKey: captchaKey,
+		Scene:      scene,
 	}); err != nil {
 		return nil, appErrors.ErrCaptchaInvalid
 	}
@@ -1105,7 +1111,18 @@ func (s *authFlow) loginWithPhoneCaptcha(tenant *model.AuthTenant, providerConfi
 	return s.issuePhoneSession(tenant, providerConfig, phone, req.DisplayName, req.AvatarURL, uint(req.CurrentUserID), req.CurrentUserRole, map[string]string{
 		"phone":        phone,
 		"login_method": "captcha",
+		"scene":        scene,
 	})
+}
+
+func resolvePhoneVerifyScene(scene string, currentUserID uint) string {
+	if strings.TrimSpace(scene) != "" {
+		return authphone.NormalizeCaptchaScene(scene)
+	}
+	if currentUserID != 0 {
+		return "bind"
+	}
+	return "login"
 }
 
 func (s *authFlow) loginWithPhoneOneClick(tenant *model.AuthTenant, providerConfig *model.AuthProviderConfig, req *ProviderCallbackRequest) (*SessionResponse, error) {
@@ -1337,12 +1354,20 @@ type phoneProviderExtra struct {
 }
 
 type phoneSMSExtra struct {
-	SecretID    string `json:"secret_id,omitempty"`
-	SecretKey   string `json:"secret_key,omitempty"`
-	SmsSDKAppID string `json:"sms_sdk_app_id,omitempty"`
-	SignName    string `json:"sign_name,omitempty"`
-	TemplateID  string `json:"template_id,omitempty"`
-	Region      string `json:"region,omitempty"`
+	SecretID       string                           `json:"secret_id,omitempty"`
+	SecretKey      string                           `json:"secret_key,omitempty"`
+	AppKey         string                           `json:"app_key,omitempty"`
+	SmsSDKAppID    string                           `json:"sms_sdk_app_id,omitempty"`
+	SignName       string                           `json:"sign_name,omitempty"`
+	TemplateID     string                           `json:"template_id,omitempty"`
+	TemplateParams []string                         `json:"template_params,omitempty"`
+	Templates      map[string]phoneSMSTemplateExtra `json:"templates,omitempty"`
+	Region         string                           `json:"region,omitempty"`
+}
+
+type phoneSMSTemplateExtra struct {
+	TemplateID string   `json:"template_id,omitempty"`
+	Params     []string `json:"params,omitempty"`
 }
 
 type phoneGetuiExtra struct {
@@ -1364,9 +1389,12 @@ func parsePhoneProviderExtra(raw string) (*phoneProviderExtra, error) {
 	if extra.SMS != nil {
 		extra.SMS.SecretID = strings.TrimSpace(extra.SMS.SecretID)
 		extra.SMS.SecretKey = strings.TrimSpace(extra.SMS.SecretKey)
+		extra.SMS.AppKey = strings.TrimSpace(extra.SMS.AppKey)
 		extra.SMS.SmsSDKAppID = strings.TrimSpace(extra.SMS.SmsSDKAppID)
 		extra.SMS.SignName = strings.TrimSpace(extra.SMS.SignName)
 		extra.SMS.TemplateID = strings.TrimSpace(extra.SMS.TemplateID)
+		extra.SMS.TemplateParams = normalizePhoneSMSParamNames(extra.SMS.TemplateParams)
+		extra.SMS.Templates = normalizePhoneSMSTemplates(extra.SMS.Templates)
 		extra.SMS.Region = strings.TrimSpace(extra.SMS.Region)
 	}
 	if extra.Getui != nil {
@@ -1379,13 +1407,60 @@ func parsePhoneProviderExtra(raw string) (*phoneProviderExtra, error) {
 	return extra, nil
 }
 
+func normalizePhoneSMSParamNames(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		normalized := strings.ToLower(strings.TrimSpace(value))
+		if normalized == "" {
+			continue
+		}
+		result = append(result, normalized)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func normalizePhoneSMSTemplates(values map[string]phoneSMSTemplateExtra) map[string]phoneSMSTemplateExtra {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make(map[string]phoneSMSTemplateExtra, len(values))
+	for scene, template := range values {
+		normalizedScene := authphone.NormalizeCaptchaScene(scene)
+		result[normalizedScene] = phoneSMSTemplateExtra{
+			TemplateID: strings.TrimSpace(template.TemplateID),
+			Params:     normalizePhoneSMSParamNames(template.Params),
+		}
+	}
+	return result
+}
+
+func (c *phoneSMSExtra) ToTencentTemplateConfig() map[string]authtencentsms.TemplateConfig {
+	if c == nil || len(c.Templates) == 0 {
+		return nil
+	}
+	result := make(map[string]authtencentsms.TemplateConfig, len(c.Templates))
+	for scene, template := range c.Templates {
+		result[authphone.NormalizeCaptchaScene(scene)] = authtencentsms.TemplateConfig{
+			TemplateID: strings.TrimSpace(template.TemplateID),
+			Params:     normalizePhoneSMSParamNames(template.Params),
+		}
+	}
+	return result
+}
+
 func (c *phoneSMSExtra) IsConfigured() bool {
 	return c != nil &&
 		c.SecretID != "" &&
 		c.SecretKey != "" &&
 		c.SmsSDKAppID != "" &&
 		c.SignName != "" &&
-		c.TemplateID != ""
+		(c.TemplateID != "" || len(c.Templates) > 0)
 }
 
 func (c *phoneGetuiExtra) IsConfigured() bool {

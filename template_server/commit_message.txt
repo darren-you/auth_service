@@ -1,3 +1,3 @@
-切换 elook 小程序认证主体配置
+接入 elook 场景化短信验证码模板
 
-将 elook 租户的 wechat_miniprogram provider 切换到 WeMini 测试开发小程序，并把 AppID 与 AppSecret 统一收口到 Git YAML 配置。
+新增手机号验证码 scene 透传与腾讯云多模板配置，支持 elook 登录和换绑手机号使用独立短信模板。

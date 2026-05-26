@@ -56,6 +56,7 @@ type ProviderCallbackRequest struct {
 	Phone             string `json:"phone,omitempty"`
 	Captcha           string `json:"captcha,omitempty"`
 	CaptchaKey        string `json:"captcha_key,omitempty"`
+	Scene             string `json:"scene,omitempty"`
 	Token             string `json:"token,omitempty"`
 	Gyuid             string `json:"gyuid,omitempty"`
 	DeviceID          string `json:"device_id,omitempty"`
@@ -69,6 +70,7 @@ type PhoneCaptchaSendRequest struct {
 	TenantKey  string `json:"tenant_key"`
 	ClientType string `json:"client_type"`
 	Phone      string `json:"phone"`
+	Scene      string `json:"scene,omitempty"`
 }
 
 type GuestDeviceIDRequest struct {
