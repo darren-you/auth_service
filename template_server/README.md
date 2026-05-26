@@ -128,7 +128,7 @@
 
 ## 手机验证码短信配置
 
-手机号验证码 provider 支持在租户配置中使用结构化 `sms` 配置，并在服务启动同步到 `auth_provider_configs.extra_json`。真实密钥继续使用 `secret_base` 占位符；非敏感的 `sms_sdk_app_id`、签名、模板 ID 与模板参数顺序保留在 YAML 中统一 Git 管理。
+手机号验证码 provider 支持在租户配置中使用结构化 `sms` 配置，并在服务启动同步到 `auth_provider_configs.extra_json`。`elook` 当前将腾讯云短信应用配置直接写入私仓 YAML，由 Git 统一管理；`sms_sdk_app_id`、签名、模板 ID 与模板参数顺序同样保留在 YAML 中。
 
 `scene` 语义：
 

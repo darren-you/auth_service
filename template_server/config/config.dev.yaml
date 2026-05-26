@@ -119,9 +119,9 @@ auth:
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
           sms:
-            secret_id: "{{ secret `auth.tenants.elook.providers.phone.sms.secret_id` }}"
-            secret_key: "{{ secret `auth.tenants.elook.providers.phone.sms.secret_key` }}"
-            app_key: "{{ secret `auth.tenants.elook.providers.phone.sms.app_key` }}"
+            secret_id: "AKID1wjLk7MYcWEiy2yhD1d2DAvSlqpkVM7r"
+            secret_key: "Qo073mIbkgZGk170qVyUvAC5nYFqJcjf"
+            app_key: "54150427e31d1628c60440a3625f7740"
             sms_sdk_app_id: "1401133423"
             sign_name: 益课家校
             region: ap-guangzhou
