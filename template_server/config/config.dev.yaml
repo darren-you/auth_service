@@ -108,7 +108,14 @@ auth:
           client_type: miniprogram
           enabled: true
           app_id: wx4b158c199ebc23c8
-          app_secret: 802c7a69dffb6f7389f31857867b6e90
+          app_secret: "{{ secret `auth.tenants.elook.providers.wechat.app_secret` }}"
+        - provider: wechat_web
+          client_type: web
+          enabled: true
+          app_id: wxdb50a7def9bf241e
+          app_secret: "{{ secret `auth.tenants.elook.providers.wechat_web.app_secret` }}"
+          redirect_uri: https://elookconsole.xdarren.com/
+          scope: snsapi_login
         - provider: password
           client_type: default
           enabled: true
