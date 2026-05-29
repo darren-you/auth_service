@@ -1,3 +1,3 @@
-接入 elook 后台微信扫码登录配置
+调整 elook 微信扫码登录回调路径
 
-为 elook 租户新增微信开放平台网站应用 Provider，并将微信密钥从模板 YAML 收口到 secret 配置占位符。
+将 elook 微信开放平台 Web 登录回调地址对齐为后台页面内扫码登录使用的 /wechat/callback 路径。

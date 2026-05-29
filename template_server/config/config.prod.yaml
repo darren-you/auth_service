@@ -114,7 +114,7 @@ auth:
           enabled: true
           app_id: wxdb50a7def9bf241e
           app_secret: "{{ secret `auth.tenants.elook.providers.wechat_web.app_secret` }}"
-          redirect_uri: https://elookconsole.xdarren.com/
+          redirect_uri: https://elookconsole.xdarren.com/wechat/callback
           scope: snsapi_login
         - provider: password
           client_type: default
