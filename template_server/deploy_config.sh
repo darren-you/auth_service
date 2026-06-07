@@ -19,9 +19,10 @@ apply_deploy_profile_defaults "$DEPLOY_SERVER_PROFILE" "server"
 # 项目特定
 # =========================================
 REMOTE_CONTAINER_PORT="8080"
-SECRET_BASE_ENABLED="true"
-SECRET_BASE_REPO="auth_service"
-SECRET_BASE_SUBPROJECT="template_server"
+SECRET_BASE_ENABLED="false"
+PROFILE_CONFIG_ENABLED="true"
+PROFILE_CONFIG_REPO="auth_service"
+PROFILE_CONFIG_SUBPROJECT="template_server"
 DOCKERFILE_PATH="$PROJECT_ROOT/Dockerfile"
 DOCKER_BUILD_CONTEXT="$PROJECT_ROOT/.."
 BASE_IMAGE_REGISTRY_CANDIDATES="docker.m.daocloud.io,docker.io"
@@ -39,4 +40,4 @@ TEST_LOG_PATH=""
 # =========================================
 # 通知配置
 # =========================================
-WECHAT_WEBHOOK_URL="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=e2856bcc-f9a7-4352-95e5-1c6bdc5c6f75"
+WECHAT_WEBHOOK_URL=""

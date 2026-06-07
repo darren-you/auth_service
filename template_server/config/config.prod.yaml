@@ -19,7 +19,7 @@ mysql:
   host: 1Panel-mysql-RHnT
   port: 3306
   user: service_runner
-  password: "{{ secret `mysql.password` }}"
+  password: "{{ profile `AUTH_SERVICE_SERVER_MYSQL_PASSWORD` }}"
   database: auth_service
   max_open_conns: 100
   max_idle_conns: 10
@@ -27,7 +27,7 @@ mysql:
 
 redis:
   addr: 1Panel-redis-PDvy:6379
-  password: "{{ secret `redis.password` }}"
+  password: "{{ profile `AUTH_SERVICE_SERVER_REDIS_PASSWORD` }}"
   db: 2
   pool_size: 10
 
@@ -36,7 +36,7 @@ log:
   file: logs/app.log
 
 jwt:
-  secret: "{{ secret `jwt.secret` }}"
+  secret: "{{ profile `AUTH_SERVICE_SERVER_JWT_SECRET` }}"
   issuer: auth_service
   access_expiry: 7200
   refresh_expiry: 7776000
@@ -50,20 +50,20 @@ auth:
       name: Stellar
       enabled: true
       bridge_base_url: https://stellar.xdarren.com
-      bridge_auth_key: "{{ secret `auth.tenants.stellar.bridge_auth_key` }}"
+      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_STELLAR_BRIDGE_AUTH_KEY` }}"
       providers:
         - provider: wechat_app
           client_type: app
           enabled: true
           app_id: wxd5551e8aab2c8f3e
-          app_secret: "{{ secret `auth.tenants.stellar.providers.wechat.app_secret` }}"
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_STELLAR_PROVIDERS_WECHAT_APP_SECRET` }}"
         - provider: apple
           client_type: ios
           enabled: true
           client_id: com.xdarren.stellar
           team_id: X4L9Z2674W
           key_id: 3R537T99VJ
-          signing_key: "{{ secret `auth.tenants.stellar.providers.apple.signing_key` }}"
+          signing_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_STELLAR_PROVIDERS_APPLE_SIGNING_KEY` }}"
         - provider: password
           client_type: app
           enabled: true
@@ -73,7 +73,7 @@ auth:
           test_phone: "18912345678"
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
-          extra_json: "{{ secret `auth.tenants.stellar.providers.phone.extra_json` }}"
+          extra_json: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_STELLAR_PROVIDERS_PHONE_EXTRA_JSON` }}"
         - provider: guest
           client_type: app
           enabled: true
@@ -81,19 +81,19 @@ auth:
       name: TinyText
       enabled: true
       bridge_base_url: https://tinytext.xdarren.com
-      bridge_auth_key: "{{ secret `auth.tenants.tinytext.bridge_auth_key` }}"
+      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_TINYTEXT_BRIDGE_AUTH_KEY` }}"
       providers:
         - provider: wechat_web
           client_type: web
           enabled: true
           app_id: wxbb79bd2eb7ece73a
-          app_secret: "{{ secret `auth.tenants.tinytext.providers.wechat.app_secret` }}"
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_TINYTEXT_PROVIDERS_WECHAT_APP_SECRET` }}"
           redirect_uri: https://tinytext.xdarren.com/wechat/callback
           scope: snsapi_login
         - provider: firebase_auth
           client_type: web
           enabled: true
-          client_id: "{{ secret `auth.tenants.tinytext.providers.firebase.project_id` }}"
+          client_id: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_TINYTEXT_PROVIDERS_FIREBASE_PROJECT_ID` }}"
     - key: elook
       name: Elook
       enabled: true
@@ -102,18 +102,18 @@ auth:
         - https://files.xdarren.com/elook/images/defaults/avatar.png
         - http://files.xdarren.com/images/bear.jpeg
       bridge_base_url: http://elook_server_prod:8080
-      bridge_auth_key: "{{ secret `auth.tenants.elook.bridge_auth_key` }}"
+      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_ELOOK_BRIDGE_AUTH_KEY` }}"
       providers:
         - provider: wechat_miniprogram
           client_type: miniprogram
           enabled: true
           app_id: wxacd92b14193e2feb
-          app_secret: "{{ secret `auth.tenants.elook.providers.wechat.app_secret` }}"
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_ELOOK_PROVIDERS_WECHAT_APP_SECRET` }}"
         - provider: wechat_web
           client_type: web
           enabled: true
           app_id: wxdb50a7def9bf241e
-          app_secret: "{{ secret `auth.tenants.elook.providers.wechat_web.app_secret` }}"
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_ELOOK_PROVIDERS_WECHAT_WEB_APP_SECRET` }}"
           redirect_uri: https://console.elookedu.cn/wechat/callback
           scope: snsapi_login
         - provider: password
@@ -126,9 +126,9 @@ auth:
           test_captcha: "1234"
           test_captcha_key: test-captcha-key
           sms:
-            secret_id: "AKID1wjLk7MYcWEiy2yhD1d2DAvSlqpkVM7r"
-            secret_key: "Qo073mIbkgZGk170qVyUvAC5nYFqJcjf"
-            app_key: "54150427e31d1628c60440a3625f7740"
+            secret_id: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_ELOOK_PROVIDERS_PHONE_SMS_SECRET_ID` }}"
+            secret_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_ELOOK_PROVIDERS_PHONE_SMS_SECRET_KEY` }}"
+            app_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_ELOOK_PROVIDERS_PHONE_SMS_APP_KEY` }}"
             sms_sdk_app_id: "1401133423"
             sign_name: 两江新区益课学生校外托管
             region: ap-guangzhou
@@ -150,7 +150,7 @@ auth:
       name: Imagen
       enabled: true
       bridge_base_url: http://imagen_server_prod:8080
-      bridge_auth_key: "{{ secret `auth.tenants.imagen.bridge_auth_key` }}"
+      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_IMAGEN_BRIDGE_AUTH_KEY` }}"
       providers:
         - provider: password
           client_type: default
@@ -159,7 +159,7 @@ auth:
       name: Notification
       enabled: true
       bridge_base_url: http://notification_server_prod:8080
-      bridge_auth_key: "{{ secret `auth.tenants.notification.bridge_auth_key` }}"
+      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_NOTIFICATION_BRIDGE_AUTH_KEY` }}"
       providers:
         - provider: password
           client_type: default
