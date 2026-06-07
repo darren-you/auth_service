@@ -56,6 +56,7 @@
 - 本工作区所说的 `CICD`，默认指 production / prod / 线上部署。
 - `fast_deploy` 是部署标准的唯一来源；所有部署、验证、SSH 目标都必须优先从真实 `deploy_config.sh` 和当前仓库结构动态读取。
 - `fast_deploy` 是部署标准的唯一来源，不要为历史子工程目录、旧配置路径或非标准结构继续在 `fast_deploy` 内追加兼容逻辑；发现业务仓库不符合规范时，应优先修改业务仓库本身对齐当前标准。
+- 在 `darren_space` 工作区内，`ci-mac` / `server_launchd` / LaunchAgent 的 `LAUNCHD_LABEL` 必须使用 `com.xdarren.*` 前缀；禁止新增或继续保留 `com.darren.*` label。发现历史 `com.darren.*` 时，必须作为迁移下线对象处理，例如通过 `LAUNCHD_REPLACED_LABELS` 停用旧 label 并删除旧 plist，不能作为兼容服务继续运行。
 - 执行部署后，必须补做线上验证；详细发布、验证与排障流程优先走对应 Skill 或 MCP。
 - `AGENTS.md` 中禁止写入某个具体项目专属的域名、服务器 IP、账号密码、固定容器名、固定部署目录等硬编码信息。
 - 部署流程、发布检查和 SSH 排障优先参考：
