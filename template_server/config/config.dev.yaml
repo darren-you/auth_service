@@ -80,7 +80,7 @@ auth:
     - key: tinytext
       name: TinyText
       enabled: true
-      bridge_base_url: https://tinytext.xdarren.com
+      bridge_base_url: http://tinytext_server_test:8080
       bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_TINYTEXT_BRIDGE_AUTH_KEY` }}"
       providers:
         - provider: wechat_web
