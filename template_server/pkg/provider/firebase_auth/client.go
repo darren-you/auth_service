@@ -3,10 +3,12 @@ package firebaseauth
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,7 +18,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const defaultJWKSURL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+const (
+	defaultJWKSURL               = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+	defaultRequestTimeout        = 20 * time.Second
+	defaultDialTimeout           = 5 * time.Second
+	defaultTLSHandshakeTimeout   = 8 * time.Second
+	defaultResponseHeaderTimeout = 15 * time.Second
+	defaultIdleConnTimeout       = 90 * time.Second
+)
 
 type Config struct {
 	ProjectID            string
@@ -82,7 +91,7 @@ func NewClient(cfg Config) (*Client, error) {
 
 	timeout := time.Duration(cfg.RequestTimeoutSecond) * time.Second
 	if timeout <= 0 {
-		timeout = 8 * time.Second
+		timeout = defaultRequestTimeout
 	}
 
 	jwksURL := strings.TrimSpace(cfg.JWKSURL)
@@ -91,12 +100,38 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 
 	return &Client{
-		projectID: projectID,
-		jwksURL:   jwksURL,
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
+		projectID:  projectID,
+		jwksURL:    jwksURL,
+		httpClient: newJWKSHTTPClient(timeout),
 	}, nil
+}
+
+func newJWKSHTTPClient(timeout time.Duration) *http.Client {
+	dialer := &net.Dialer{
+		Timeout:   minDuration(timeout, defaultDialTimeout),
+		KeepAlive: 30 * time.Second,
+	}
+	return &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: func(ctx context.Context, _ string, address string) (net.Conn, error) {
+				return dialer.DialContext(ctx, "tcp4", address)
+			},
+			TLSHandshakeTimeout:   minDuration(timeout, defaultTLSHandshakeTimeout),
+			ResponseHeaderTimeout: minDuration(timeout, defaultResponseHeaderTimeout),
+			ExpectContinueTimeout: 1 * time.Second,
+			IdleConnTimeout:       defaultIdleConnTimeout,
+			TLSNextProto:          map[string]func(string, *tls.Conn) http.RoundTripper{},
+		},
+	}
+}
+
+func minDuration(left, right time.Duration) time.Duration {
+	if left < right {
+		return left
+	}
+	return right
 }
 
 func (c *Client) VerifyIDToken(ctx context.Context, rawIDToken string) (*VerifiedIDToken, error) {

@@ -12,8 +12,9 @@ import (
 )
 
 type firebaseProviderExtraConfig struct {
-	ProjectID string `json:"project_id"`
-	JWKSURL   string `json:"jwks_url"`
+	ProjectID            string `json:"project_id"`
+	JWKSURL              string `json:"jwks_url"`
+	RequestTimeoutSecond int    `json:"request_timeout_second"`
 }
 
 func (s *authFlow) loginWithFirebaseAuth(req *ProviderCallbackRequest) (*SessionResponse, error) {
@@ -115,8 +116,9 @@ func (s *authFlow) loginWithFirebaseAuth(req *ProviderCallbackRequest) (*Session
 func newFirebaseAuthProviderClient(providerConfig *model.AuthProviderConfig) (*firebaseauth.Client, error) {
 	extraCfg := parseFirebaseProviderExtraConfig(providerConfig.ExtraJSON)
 	return firebaseauth.NewClient(firebaseauth.Config{
-		ProjectID: firstNonEmpty(extraCfg.ProjectID, providerConfig.ClientID),
-		JWKSURL:   extraCfg.JWKSURL,
+		ProjectID:            firstNonEmpty(extraCfg.ProjectID, providerConfig.ClientID),
+		JWKSURL:              extraCfg.JWKSURL,
+		RequestTimeoutSecond: extraCfg.RequestTimeoutSecond,
 	})
 }
 
