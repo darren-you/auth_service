@@ -1,3 +1,3 @@
-修复 Firebase JWKS 拉取超时
+新增 Web Gate 统一认证能力
 
-auth_service 在海外 IPv4 运行面下使用专用 HTTP 客户端获取 Firebase JWKS，并放宽默认请求超时，避免校验 Google ID token 时等待响应头超时。
+新增 web_gate provider、登录签发、会话校验与登出接口，支持按租户和客户端配置访问口令并签发服务端签名 Gate session。

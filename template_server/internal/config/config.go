@@ -256,6 +256,15 @@ func validateTenantConfigs(tenants []TenantConfig) error {
 func validateTenantProviderConfigs(tenant TenantConfig) error {
 	for _, provider := range tenant.Providers {
 		normalizedProvider := providerkeys.NormalizeProvider(provider.Provider)
+		if normalizedProvider == providerkeys.ProviderWebGate {
+			if providerkeys.NormalizeClientType(provider.ClientType) == "" {
+				return fmt.Errorf("auth provider %s requires client_type", provider.Provider)
+			}
+			if provider.Enabled && strings.TrimSpace(provider.AppSecret) == "" {
+				return fmt.Errorf("auth provider %s requires app_secret", provider.Provider)
+			}
+			continue
+		}
 		if normalizedProvider == providerkeys.ProviderFirebaseAuth {
 			if providerkeys.NormalizeClientType(provider.ClientType) == "" {
 				return fmt.Errorf("auth provider %s requires client_type", provider.Provider)
@@ -440,7 +449,7 @@ func normalizeConfig(cfg *Config) {
 		cfg.Server.AllowMethods = []string{"GET", "POST", "OPTIONS"}
 	}
 	if len(cfg.Server.AllowHeaders) == 0 {
-		cfg.Server.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"}
+		cfg.Server.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID", "X-Web-Gate-Tenant-Key", "X-Web-Gate-Client-Type", "X-Web-Gate-Password"}
 	}
 
 	cfg.MySQL.Host = fallbackString(cfg.MySQL.Host, "127.0.0.1")

@@ -143,6 +143,38 @@ func TestValidateRejectsInvalidTenantDefaultAvatarURL(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsEnabledWebGateWithoutSecret(t *testing.T) {
+	cfg := Config{
+		JWT: JWTConfig{
+			Secret: "test-secret",
+		},
+		Auth: AuthConfig{
+			Tenants: []TenantConfig{
+				{
+					Key:     "appbox",
+					Name:    "AppBox",
+					Enabled: true,
+					Providers: []ProviderConfig{
+						{
+							Provider:   providerkeys.ProviderWebGate,
+							ClientType: providerkeys.ClientTypeWeb,
+							Enabled:    true,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatalf("expected enabled web_gate without app_secret to fail validation")
+	}
+	if !strings.Contains(err.Error(), "app_secret") {
+		t.Fatalf("expected app_secret validation error, got %v", err)
+	}
+}
+
 func TestValidateAcceptsFirebaseAuthProviderWithProjectID(t *testing.T) {
 	cfg := Config{
 		JWT: JWTConfig{

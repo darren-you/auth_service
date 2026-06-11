@@ -51,6 +51,21 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: RefreshHandler(serverCtx),
 			},
 			{
+				Method:  http.MethodPost,
+				Path:    "/api/v1/auth/web-gate/login",
+				Handler: WebGateLoginHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/api/v1/auth/web-gate/verify",
+				Handler: WebGateVerifyHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/api/v1/auth/web-gate/logout",
+				Handler: WebGateLogoutHandler(serverCtx),
+			},
+			{
 				Method:  http.MethodGet,
 				Path:    "/api/v1/health",
 				Handler: HealthHandler(serverCtx),

@@ -14,6 +14,9 @@ server:
     - Accept
     - Authorization
     - X-Request-ID
+    - X-Web-Gate-Tenant-Key
+    - X-Web-Gate-Client-Type
+    - X-Web-Gate-Password
 
 mysql:
   host: 127.0.0.1

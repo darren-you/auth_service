@@ -37,6 +37,7 @@
 - 手机验证码可按 `scene=login|bind|rebind` 选择短信模板；`elook` 小程序当前使用「小程序登录验证码」与「小程序换绑验证码」两套腾讯云模板。
 - Getui 手机号快捷登录
 - 游客登录
+- Web Gate 口令登录与签名 session 校验
 - 多租户 `tenant / provider / client_type` 配置同步
 - `access token / refresh token` 签发与轮换
 - 统一 `auth_users / auth_identities / auth_sessions` 存储
@@ -57,9 +58,25 @@
 - `POST /api/v1/auth/providers/guest/device-id`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/web-gate/login`
+- `GET /api/v1/auth/web-gate/verify`
+- `POST /api/v1/auth/web-gate/logout`
 - `GET /api/v1/auth/me`
 - `PUT /api/v1/auth/me`
 - `PUT /api/v1/auth/internal/users`：仅供业务 server 使用 `X-Auth-Service-Key` 回写指定业务用户的共享资料字段
+
+## Web Gate provider 约定
+
+- 内部 Web 入口口令统一使用租户 provider 配置表达：`provider=web_gate`、`client_type=web`、`app_secret=<访问口令>`。
+- Nginx 只负责把当前站点的 `tenant_key`、`client_type` 和用户提交的口令转发到 `POST /api/v1/auth/web-gate/login`。
+- 登录成功后由 `auth_service` 签发服务端签名的 Gate session Cookie；Nginx 后续通过 `GET /api/v1/auth/web-gate/verify` 校验 Cookie 后再放行页面、静态资源、API 或 WebSocket。
+- `extra_json` 可配置 Cookie 行为，例如：
+
+```json
+{"cookie_name":"appbox_gate","cookie_same_site":"lax","session_ttl_second":2592000}
+```
+
+- `web_gate` 不回调业务 bridge，不创建业务用户，只承担内部 Web Gate 的口令校验和 session 签发。
 
 ## 微信小程序接入约定
 

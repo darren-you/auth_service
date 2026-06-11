@@ -14,6 +14,9 @@ server:
     - Accept
     - Authorization
     - X-Request-ID
+    - X-Web-Gate-Tenant-Key
+    - X-Web-Gate-Client-Type
+    - X-Web-Gate-Password
 
 mysql:
   host: 1Panel-mysql-RHnT
@@ -155,6 +158,15 @@ auth:
         - provider: password
           client_type: default
           enabled: true
+    - key: appbox
+      name: AppBox
+      enabled: true
+      providers:
+        - provider: web_gate
+          client_type: web
+          enabled: true
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_APPBOX_PROVIDERS_WEB_GATE_SECRET` }}"
+          extra_json: '{"cookie_name":"appbox_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
     - key: notification
       name: Notification
       enabled: true
@@ -164,3 +176,44 @@ auth:
         - provider: password
           client_type: default
           enabled: true
+        - provider: web_gate
+          client_type: web
+          enabled: true
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_NOTIFICATION_PROVIDERS_WEB_GATE_SECRET` }}"
+          extra_json: '{"cookie_name":"notification_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
+    - key: wechat_agent
+      name: WeChat Agent
+      enabled: true
+      providers:
+        - provider: web_gate
+          client_type: web
+          enabled: true
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_WECHAT_AGENT_PROVIDERS_WEB_GATE_SECRET` }}"
+          extra_json: '{"cookie_name":"wechat_agent_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
+    - key: protocol
+      name: Protocol
+      enabled: true
+      providers:
+        - provider: web_gate
+          client_type: web
+          enabled: true
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_PROTOCOL_PROVIDERS_WEB_GATE_SECRET` }}"
+          extra_json: '{"cookie_name":"protocol_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
+    - key: bestway
+      name: BestWay
+      enabled: true
+      providers:
+        - provider: web_gate
+          client_type: web
+          enabled: true
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_BESTWAY_PROVIDERS_WEB_GATE_SECRET` }}"
+          extra_json: '{"cookie_name":"bestway_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
+    - key: hxh_studio
+      name: HXH Studio
+      enabled: true
+      providers:
+        - provider: web_gate
+          client_type: web
+          enabled: true
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_HXH_STUDIO_PROVIDERS_WEB_GATE_SECRET` }}"
+          extra_json: '{"cookie_name":"hxh_studio_gate","cookie_same_site":"lax","session_ttl_second":2592000}'

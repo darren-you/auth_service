@@ -18,6 +18,22 @@ type UpdateMeReq struct {
 	AvatarURL   string `json:"avatar_url,optional"`
 }
 
+type WebGateLoginReq struct {
+	TenantKey  string `json:"tenant_key,optional"`
+	ClientType string `json:"client_type,optional"`
+	Password   string `json:"password,optional"`
+}
+
+type WebGateVerifyReq struct {
+	TenantKey  string `json:"tenant_key,optional"`
+	ClientType string `json:"client_type,optional"`
+}
+
+type WebGateLogoutReq struct {
+	TenantKey  string `json:"tenant_key,optional"`
+	ClientType string `json:"client_type,optional"`
+}
+
 type InternalUpdateUserReq struct {
 	TenantKey   string `json:"tenant_key"`
 	UserID      uint64 `json:"user_id"`

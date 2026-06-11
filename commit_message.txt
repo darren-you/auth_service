@@ -1,3 +1,3 @@
-同步 ci-mac 升级期间本地构建规则
+新增 Web Gate 统一认证能力
 
-同步工作区 AGENTS 生成规则，说明 ci-mac 固态升级期间暂走本地构建。
+新增 web_gate provider、登录签发、会话校验与登出接口，支持按租户和客户端配置访问口令并签发服务端签名 Gate session。

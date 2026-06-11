@@ -11,6 +11,7 @@ const (
 	ProviderPassword          = "password"
 	ProviderPhone             = "phone"
 	ProviderGuest             = "guest"
+	ProviderWebGate           = "web_gate"
 )
 
 const (
