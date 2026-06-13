@@ -1,3 +1,3 @@
-对齐 elook 小程序认证 AppID
-同步 AGENTS 与 fast_deploy 基线
-将 auth_service 中 elook 租户的小程序 provider AppID 统一到当前线上 secret 对应的小程序主体，修复 code2session 返回 invalid appsecret 的问题。
+对齐 ci-mac 宿主预检发布主路径
+
+同步工作区 AGENTS 生成规则，收回固态升级期间“本地构建替代 Jenkins 主路径”的临时口径。
