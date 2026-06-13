@@ -1,0 +1,9 @@
+version: 1
+repo: example_repo
+subproject: template_server
+env: prod
+secrets:
+  mysql.password: "replace-with-mysql-password"
+  redis.password: "replace-with-redis-password"
+  jwt.secret: "replace-with-jwt-secret"
+  auth_service.bridge_auth_key: "replace-with-bridge-auth-key"

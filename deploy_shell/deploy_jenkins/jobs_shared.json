@@ -1,0 +1,515 @@
+{
+  "parameter_profiles": {
+    "branch_only": {
+      "parameterized": true,
+      "parameter_definitions": [
+        {
+          "tag": "net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition",
+          "attributes": {
+            "plugin": "git-parameter@460.v71e7583a_c099"
+          },
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildBranch"
+            },
+            {
+              "tag": "description",
+              "text": "构建分支"
+            },
+            {
+              "tag": "uuid",
+              "text": "{{build_branch_uuid}}"
+            },
+            {
+              "tag": "type",
+              "text": "PT_BRANCH"
+            },
+            {
+              "tag": "branch",
+              "text": ""
+            },
+            {
+              "tag": "tagFilter",
+              "text": "*"
+            },
+            {
+              "tag": "branchFilter",
+              "text": ".*"
+            },
+            {
+              "tag": "sortMode",
+              "text": "NONE"
+            },
+            {
+              "tag": "defaultValue",
+              "text": "{{branch_parameter_default}}"
+            },
+            {
+              "tag": "selectedValue",
+              "text": "NONE"
+            },
+            {
+              "tag": "quickFilterEnabled",
+              "text": "false"
+            },
+            {
+              "tag": "listSize",
+              "text": "5"
+            },
+            {
+              "tag": "requiredParameter",
+              "text": "false"
+            }
+          ]
+        }
+      ]
+    },
+    "server": {
+      "parameterized": true,
+      "parameter_definitions": [
+        {
+          "tag": "net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition",
+          "attributes": {
+            "plugin": "git-parameter@460.v71e7583a_c099"
+          },
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildBranch"
+            },
+            {
+              "tag": "description",
+              "text": "构建分支"
+            },
+            {
+              "tag": "uuid",
+              "text": "{{build_branch_uuid}}"
+            },
+            {
+              "tag": "type",
+              "text": "PT_BRANCH"
+            },
+            {
+              "tag": "branch",
+              "text": ""
+            },
+            {
+              "tag": "tagFilter",
+              "text": "*"
+            },
+            {
+              "tag": "branchFilter",
+              "text": ".*"
+            },
+            {
+              "tag": "sortMode",
+              "text": "NONE"
+            },
+            {
+              "tag": "defaultValue",
+              "text": "{{branch_parameter_default}}"
+            },
+            {
+              "tag": "selectedValue",
+              "text": "NONE"
+            },
+            {
+              "tag": "quickFilterEnabled",
+              "text": "false"
+            },
+            {
+              "tag": "listSize",
+              "text": "5"
+            },
+            {
+              "tag": "requiredParameter",
+              "text": "false"
+            }
+          ]
+        },
+        {
+          "tag": "hudson.model.ChoiceParameterDefinition",
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildEnv"
+            },
+            {
+              "tag": "description",
+              "text": "🌍后端环境\ntest:  测试环境\nprod: 生产环境"
+            },
+            {
+              "tag": "choices",
+              "attributes": {
+                "class": "java.util.Arrays$ArrayList"
+              },
+              "children": [
+                {
+                  "tag": "a",
+                  "attributes": {
+                    "class": "string-array"
+                  },
+                  "children": [
+                    {
+                      "tag": "string",
+                      "text": "test"
+                    },
+                    {
+                      "tag": "string",
+                      "text": "prod"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "swift_app": {
+      "parameterized": true,
+      "parameter_definitions": [
+        {
+          "tag": "net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition",
+          "attributes": {
+            "plugin": "git-parameter@460.v71e7583a_c099"
+          },
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildBranch"
+            },
+            {
+              "tag": "description",
+              "text": "构建分支"
+            },
+            {
+              "tag": "uuid",
+              "text": "{{build_branch_uuid}}"
+            },
+            {
+              "tag": "type",
+              "text": "PT_BRANCH"
+            },
+            {
+              "tag": "branch",
+              "text": ""
+            },
+            {
+              "tag": "tagFilter",
+              "text": "*"
+            },
+            {
+              "tag": "branchFilter",
+              "text": ".*"
+            },
+            {
+              "tag": "sortMode",
+              "text": "NONE"
+            },
+            {
+              "tag": "defaultValue",
+              "text": "{{branch_parameter_default}}"
+            },
+            {
+              "tag": "selectedValue",
+              "text": "NONE"
+            },
+            {
+              "tag": "quickFilterEnabled",
+              "text": "false"
+            },
+            {
+              "tag": "listSize",
+              "text": "5"
+            },
+            {
+              "tag": "requiredParameter",
+              "text": "false"
+            }
+          ]
+        },
+        {
+          "tag": "hudson.model.ChoiceParameterDefinition",
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildType"
+            },
+            {
+              "tag": "description",
+              "text": "📦打包类型\napp-store（市场包）\nad-hoc    （测试包）"
+            },
+            {
+              "tag": "choices",
+              "attributes": {
+                "class": "java.util.Arrays$ArrayList"
+              },
+              "children": [
+                {
+                  "tag": "a",
+                  "attributes": {
+                    "class": "string-array"
+                  },
+                  "children": [
+                    {
+                      "tag": "string",
+                      "text": "app-store"
+                    },
+                    {
+                      "tag": "string",
+                      "text": "ad-hoc"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "hudson.model.ChoiceParameterDefinition",
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildEnv"
+            },
+            {
+              "tag": "description",
+              "text": "🌍后端环境\ntest:  测试环境\nprod: 生产环境"
+            },
+            {
+              "tag": "choices",
+              "attributes": {
+                "class": "java.util.Arrays$ArrayList"
+              },
+              "children": [
+                {
+                  "tag": "a",
+                  "attributes": {
+                    "class": "string-array"
+                  },
+                  "children": [
+                    {
+                      "tag": "string",
+                      "text": "test"
+                    },
+                    {
+                      "tag": "string",
+                      "text": "prod"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "hudson.model.ChoiceParameterDefinition",
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildPodUpdate"
+            },
+            {
+              "tag": "description",
+              "text": "🚀是否需要 pod update\nfalse:  ❌不需要\ntrue:   ✅需要"
+            },
+            {
+              "tag": "choices",
+              "attributes": {
+                "class": "java.util.Arrays$ArrayList"
+              },
+              "children": [
+                {
+                  "tag": "a",
+                  "attributes": {
+                    "class": "string-array"
+                  },
+                  "children": [
+                    {
+                      "tag": "string",
+                      "text": "false"
+                    },
+                    {
+                      "tag": "string",
+                      "text": "true"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "android_app": {
+      "parameterized": true,
+      "parameter_definitions": [
+        {
+          "tag": "net.uaznia.lukanus.hudson.plugins.gitparameter.GitParameterDefinition",
+          "attributes": {
+            "plugin": "git-parameter@460.v71e7583a_c099"
+          },
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildBranch"
+            },
+            {
+              "tag": "description",
+              "text": "构建分支"
+            },
+            {
+              "tag": "uuid",
+              "text": "{{build_branch_uuid}}"
+            },
+            {
+              "tag": "type",
+              "text": "PT_BRANCH"
+            },
+            {
+              "tag": "branch",
+              "text": ""
+            },
+            {
+              "tag": "tagFilter",
+              "text": "*"
+            },
+            {
+              "tag": "branchFilter",
+              "text": ".*"
+            },
+            {
+              "tag": "sortMode",
+              "text": "NONE"
+            },
+            {
+              "tag": "defaultValue",
+              "text": "{{branch_parameter_default}}"
+            },
+            {
+              "tag": "selectedValue",
+              "text": "NONE"
+            },
+            {
+              "tag": "quickFilterEnabled",
+              "text": "false"
+            },
+            {
+              "tag": "listSize",
+              "text": "5"
+            },
+            {
+              "tag": "requiredParameter",
+              "text": "false"
+            }
+          ]
+        },
+        {
+          "tag": "hudson.model.ChoiceParameterDefinition",
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildEnv"
+            },
+            {
+              "tag": "description",
+              "text": "🌍后端环境\ntest:  测试环境\nprod: 生产环境"
+            },
+            {
+              "tag": "choices",
+              "attributes": {
+                "class": "java.util.Arrays$ArrayList"
+              },
+              "children": [
+                {
+                  "tag": "a",
+                  "attributes": {
+                    "class": "string-array"
+                  },
+                  "children": [
+                    {
+                      "tag": "string",
+                      "text": "test"
+                    },
+                    {
+                      "tag": "string",
+                      "text": "prod"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "hudson.model.StringParameterDefinition",
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildChannel"
+            },
+            {
+              "tag": "description",
+              "text": "📺Android 渠道名；可填 official、huawei，或 all 表示全渠道"
+            },
+            {
+              "tag": "defaultValue",
+              "text": "official"
+            },
+            {
+              "tag": "trim",
+              "text": "true"
+            }
+          ]
+        },
+        {
+          "tag": "hudson.model.ChoiceParameterDefinition",
+          "children": [
+            {
+              "tag": "name",
+              "text": "BuildArtifact"
+            },
+            {
+              "tag": "description",
+              "text": "📦Android 产物类型"
+            },
+            {
+              "tag": "choices",
+              "attributes": {
+                "class": "java.util.Arrays$ArrayList"
+              },
+              "children": [
+                {
+                  "tag": "a",
+                  "attributes": {
+                    "class": "string-array"
+                  },
+                  "children": [
+                    {
+                      "tag": "string",
+                      "text": "apk"
+                    },
+                    {
+                      "tag": "string",
+                      "text": "aab"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "shell_command_profiles": {
+    "swift_app": "set -euo pipefail\n\ncd \"$WORKSPACE\"\ngit submodule sync --recursive\ngit submodule update --init --remote --recursive deploy_shell\n\nbash \"$WORKSPACE/deploy_shell/deploy_swift_app/remote_deploy_pipeline.sh\" --config \"$WORKSPACE/{{config_path}}\"",
+    "android_app": "set -euo pipefail\n\ncd \"$WORKSPACE\"\ngit submodule sync --recursive\ngit submodule update --init --remote --recursive deploy_shell\n\nbash \"$WORKSPACE/deploy_shell/deploy_android_app/remote_deploy_pipeline.sh\" --config \"$WORKSPACE/{{config_path}}\"",
+    "web": "set -euo pipefail\n\ncd \"$WORKSPACE\"\ngit submodule sync --recursive\ngit submodule update --init --remote --recursive deploy_shell\n\nbash \"$WORKSPACE/deploy_shell/deploy_web/remote_deploy_pipeline.sh\" --config \"$WORKSPACE/{{config_path}}\"",
+    "server": "set -euo pipefail\n\ncd \"$WORKSPACE\"\ngit submodule sync --recursive\ngit submodule update --init --remote --recursive deploy_shell\n\nbash \"$WORKSPACE/deploy_shell/deploy_server/remote_deploy_pipeline.sh\" --config \"$WORKSPACE/{{config_path}}\"",
+    "nginx": "set -euo pipefail\n\ncd \"$WORKSPACE\"\ngit submodule sync --recursive\ngit submodule update --init --remote --recursive deploy_shell\n\nbash \"$WORKSPACE/deploy_shell/deploy_nginx/remote_deploy_pipeline.sh\" --config \"$WORKSPACE/{{config_path}}\"",
+    "ssl": "set -euo pipefail\n\ncd \"$WORKSPACE\"\ngit submodule sync --recursive\ngit submodule update --init --remote --recursive deploy_shell\n\nbash \"$WORKSPACE/deploy_shell/deploy_ssl/remote_deploy_pipeline.sh\" --config \"$WORKSPACE/{{config_path}}\""
+  }
+}

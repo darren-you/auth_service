@@ -1,0 +1,123 @@
+{
+  "version": 2,
+  "shared_file": "jobs_shared.json",
+  "jobs": [
+    {
+      "name": "appbox_server",
+      "type": "server",
+      "repo_url": "git@github.com:darren-you/appbox.git",
+      "description": "AppBox后端工程",
+      "view": "💻Server",
+      "parameter_profile": "server",
+      "shell_command_profile": "server"
+    },
+    {
+      "name": "auth_service_server",
+      "type": "server",
+      "repo_url": "git@github.com:darren-you/auth_service.git",
+      "description": "AuthService统一认证域后端工程",
+      "view": "💻Server",
+      "parameter_profile": "server",
+      "shell_command_profile": "server"
+    },
+    {
+      "name": "appbox_web",
+      "type": "web",
+      "repo_url": "git@github.com:darren-you/appbox.git",
+      "description": "AppBox-Web工程",
+      "view": "🧭Web",
+      "parameter_profile": "branch_only",
+      "shell_command_profile": "web"
+    },
+    {
+      "name": "hxh_studio_web",
+      "type": "web",
+      "repo_url": "git@github.com:darren-you/hxh_studio.git",
+      "description": "HxhStduio录音棚IoT Web工程",
+      "view": "🧭Web",
+      "parameter_profile": "branch_only",
+      "shell_command_profile": "web"
+    },
+    {
+      "name": "notification_server",
+      "type": "server",
+      "repo_url": "git@github.com:darren-you/notification.git",
+      "description": "Notification-Golang后端工程",
+      "view": "💻Server",
+      "parameter_profile": "server",
+      "shell_command_profile": "server"
+    },
+    {
+      "name": "pay_service_server",
+      "type": "server",
+      "repo_url": "git@github.com:darren-you/pay_service.git",
+      "description": "PayService统一支付域后端工程",
+      "view": "💻Server",
+      "parameter_profile": "server",
+      "shell_command_profile": "server"
+    },
+    {
+      "name": "protocol_web",
+      "type": "web",
+      "repo_url": "git@github.com:darren-you/protocol.git",
+      "description": "Protocol-Web工程",
+      "view": "🧭Web",
+      "parameter_profile": "branch_only",
+      "shell_command_profile": "web"
+    },
+    {
+      "name": "sh_lite_nginx",
+      "type": "nginx",
+      "repo_url": "git@github.com:darren-you/nginx.git",
+      "description": "腾讯云上海轻量服务器Nginx配置",
+      "view": "📻Nginx",
+      "parameter_profile": "branch_only",
+      "shell_command_profile": "nginx"
+    },
+    {
+      "name": "sh_lite_ssl",
+      "type": "ssl",
+      "repo_url": "git@github.com:darren-you/agents_tools.git",
+      "description": "腾讯云上海轻量服务器SSL续期Hook",
+      "view": "🔐SSL",
+      "parameter_profile": "branch_only",
+      "shell_command_profile": "ssl"
+    },
+    {
+      "name": "stellar_app",
+      "type": "swift_app",
+      "repo_url": "git@github.com:darren-you/stellar.git",
+      "description": "星烁-iOS工程",
+      "view": "📱App",
+      "parameter_profile": "swift_app",
+      "shell_command_profile": "swift_app"
+    },
+    {
+      "name": "stellar_server",
+      "type": "server",
+      "repo_url": "git@github.com:darren-you/stellar.git",
+      "description": "星烁-Golang后端工程",
+      "view": "💻Server",
+      "parameter_profile": "server",
+      "shell_command_profile": "server"
+    },
+    {
+      "name": "tinytext_server",
+      "type": "server",
+      "repo_url": "git@github.com:darren-you/tinytext.git",
+      "description": "TinyText-Golang后端工程",
+      "view": "💻Server",
+      "parameter_profile": "server",
+      "shell_command_profile": "server"
+    },
+    {
+      "name": "tinytext_web",
+      "type": "web",
+      "repo_url": "git@github.com:darren-you/tinytext.git",
+      "description": "TinyText字体提取、压缩工程——Web",
+      "view": "🧭Web",
+      "parameter_profile": "branch_only",
+      "shell_command_profile": "web"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+server:
+  port: 8080
+
+mysql:
+  host: mysql
+  port: 3306
+  user: service_runner
+  password: "{{ secret `mysql.password` }}"
+
+redis:
+  addr: redis:6379
+  password: "{{ secret `redis.password` }}"
+
+jwt:
+  secret: "{{ secret `jwt.secret` }}"
+
+auth_service:
+  bridge_auth_key: "{{ secret `auth_service.bridge_auth_key` }}"
