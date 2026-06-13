@@ -1,3 +1,3 @@
-对齐 ci-mac 宿主预检发布主路径
+同步 apple/container 单主线 AGENTS 规则
 
-同步工作区 AGENTS 生成规则，收回固态升级期间“本地构建替代 Jenkins 主路径”的临时口径。
+回收旧 Colima/Docker 宿主预检口径，统一为 Jenkins + apple/container + Nexus。

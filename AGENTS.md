@@ -55,7 +55,7 @@
 
 - 本工作区所说的 `CICD`，默认指 production / prod / 线上部署。
 - 自 2026-06-13 起，`ci-mac` 固态升级相关临时口径下线；工作区常规构建与发布主路径统一为“本地源码预检 -> `ci-mac` 宿主预检 -> Jenkins HTTP 触发 -> 线上验证”。
-- `ci-mac` 宿主预检失败时，先修 Jenkins / Colima / Docker / Nexus 等宿主构建面，不把失败默认降级为本地直连发布或本地构建替代主路径。
+- `ci-mac` 宿主预检失败时，先修 Jenkins / `apple/container` / Nexus 等宿主构建面，不把失败默认降级为本地直连发布或本地构建替代主路径。
 - `fast_deploy` 是部署标准的唯一来源；所有部署、验证、SSH 目标都必须优先从真实 `deploy_config.sh` 和当前仓库结构动态读取。
 - `fast_deploy` 是部署标准的唯一来源，不要为历史子工程目录、旧配置路径或非标准结构继续在 `fast_deploy` 内追加兼容逻辑；发现业务仓库不符合规范时，应优先修改业务仓库本身对齐当前标准。
 - 在 `darren_space` 工作区内，`ci-mac` / `server_launchd` / LaunchAgent 的 `LAUNCHD_LABEL` 必须使用 `com.xdarren.*` 前缀；禁止新增或继续保留 `com.darren.*` label。发现历史 `com.darren.*` 时，必须作为迁移下线对象处理，例如通过 `LAUNCHD_REPLACED_LABELS` 停用旧 label 并删除旧 plist，不能作为兼容服务继续运行。
