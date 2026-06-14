@@ -1,3 +1,3 @@
-同步 fast_deploy 子模块
+同步 fast_deploy 子模块基线
 
-将 auth_service 仓库内的 fast_deploy 子模块指针同步到当前工作区使用的提交。
+将 fast_deploy 子模块指针同步到当前工作区基线提交 213959ce。
