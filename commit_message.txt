@@ -1,3 +1,3 @@
-新增 profile tenant 认证配置
+切换 app_review_ops 认证租户配置
 
-为 profile server 补齐 auth_service tenant、bridge key 配置，支撑 profile 登录注册链路。
+将应用审核运营租户从 notification 改为 app_review_ops，并同步更新 bridge 与 Web Gate 配置。

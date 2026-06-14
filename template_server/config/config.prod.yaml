@@ -176,11 +176,11 @@ auth:
           enabled: true
           app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_APPBOX_PROVIDERS_WEB_GATE_SECRET` }}"
           extra_json: '{"cookie_name":"appbox_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
-    - key: notification
-      name: Notification
+    - key: app_review_ops
+      name: App Review Ops
       enabled: true
-      bridge_base_url: http://notification_server_prod:8080
-      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_NOTIFICATION_BRIDGE_AUTH_KEY` }}"
+      bridge_base_url: http://app_review_ops_server_prod:8080
+      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_APP_REVIEW_OPS_BRIDGE_AUTH_KEY` }}"
       providers:
         - provider: password
           client_type: default
@@ -188,8 +188,8 @@ auth:
         - provider: web_gate
           client_type: web
           enabled: true
-          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_NOTIFICATION_PROVIDERS_WEB_GATE_SECRET` }}"
-          extra_json: '{"cookie_name":"notification_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
+          app_secret: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_APP_REVIEW_OPS_PROVIDERS_WEB_GATE_SECRET` }}"
+          extra_json: '{"cookie_name":"app_review_ops_gate","cookie_same_site":"lax","session_ttl_second":2592000}'
     - key: wechat_agent
       name: WeChat Agent
       enabled: true
