@@ -1,3 +1,3 @@
-补齐 auth_service 正式健康检查入口
+同步 fast_deploy 子模块
 
-在 deploy_config.sh 中声明 auth.xdarren.com 的公网健康检查地址，确保 Jenkins server 发布链路按正式入口完成校验。
+将 auth_service 仓库内的 fast_deploy 子模块指针同步到当前工作区使用的提交。
