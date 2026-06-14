@@ -1,3 +1,3 @@
-切换 app_review_ops 认证租户配置
+补齐 auth_service 正式健康检查入口
 
-将应用审核运营租户从 notification 改为 app_review_ops，并同步更新 bridge 与 Web Gate 配置。
+在 deploy_config.sh 中声明 auth.xdarren.com 的公网健康检查地址，确保 Jenkins server 发布链路按正式入口完成校验。
