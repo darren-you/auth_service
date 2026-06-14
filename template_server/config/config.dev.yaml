@@ -167,6 +167,15 @@ auth:
         - provider: password
           client_type: default
           enabled: true
+    - key: profile
+      name: Profile
+      enabled: true
+      bridge_base_url: http://profile_server_test:8080
+      bridge_auth_key: "{{ profile `AUTH_SERVICE_SERVER_AUTH_TENANTS_PROFILE_BRIDGE_AUTH_KEY` }}"
+      providers:
+        - provider: password
+          client_type: default
+          enabled: true
     - key: appbox
       name: AppBox
       enabled: true

@@ -1,3 +1,3 @@
-同步 fast_deploy 子模块
+新增 profile tenant 认证配置
 
-将 fast_deploy 更新到关闭企业微信 WebHook 通知的最新提交。
+为 profile server 补齐 auth_service tenant、bridge key 配置，支撑 profile 登录注册链路。
